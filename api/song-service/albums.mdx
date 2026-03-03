@@ -1,0 +1,224 @@
+---
+title: 'Albums'
+description: 'Retrieve album details and songs'
+---
+
+## Get Album by ID
+
+Retrieve detailed information about an album, including all songs in the album.
+
+### Endpoint
+
+```
+GET /api/v1/SongsData/GetAlbumById
+```
+
+### Authentication
+
+<Warning>
+  This endpoint requires authentication. Include a valid bearer token in the Authorization header.
+</Warning>
+
+### Query Parameters
+
+<ParamField query="albumId" type="string" required>
+  The unique identifier of the album to retrieve.
+</ParamField>
+
+<ParamField query="lyrics" type="boolean" default="false">
+  Whether to include lyrics for all songs in the album. When set to `true`, lyrics will be fetched for songs that have them available.
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="object">
+  An album object with detailed information and all songs.
+  
+  <Expandable title="Album Properties">
+    <ResponseField name="name" type="string">
+      Album name (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="title" type="string">
+      Album title (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="primary_artists" type="string">
+      Primary artists (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="year" type="integer">
+      Release year of the album
+    </ResponseField>
+    
+    <ResponseField name="image" type="string">
+      Album artwork URL (500x500 resolution)
+    </ResponseField>
+    
+    <ResponseField name="songs" type="array">
+      Array of song objects in the album
+      
+      <Expandable title="Song Object">
+        Each song object contains the same fields as documented in the [Get Song by ID](/api/song-service/songs) endpoint, including:
+        - id
+        - song (title)
+        - album
+        - primary_artists
+        - singers
+        - music
+        - starring
+        - image
+        - media_url
+        - media_preview_url
+        - 320kbps
+        - has_lyrics
+        - lyrics (if requested)
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Responses
+
+<ResponseField name="status" type="integer">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error description
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Success
+- `401` - Unauthorized (missing or invalid authentication)
+- `404` - Not Found (album with the specified ID does not exist)
+
+### Examples
+
+<CodeGroup>
+
+```bash Basic Request
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetAlbumById?albumId=12345" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```bash With Lyrics
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetAlbumById?albumId=12345&lyrics=true" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+</CodeGroup>
+
+### Response Example
+
+```json
+{
+  "name": "Aashiqui 2",
+  "title": "Aashiqui 2",
+  "primary_artists": "Mithoon, Ankit Tiwari, Jeet Gannguli",
+  "year": 2013,
+  "image": "https://c.saavncdn.com/album.jpg?500x500",
+  "songs": [
+    {
+      "id": "abc123",
+      "song": "Tum Hi Ho",
+      "album": "Aashiqui 2",
+      "primary_artists": "Arijit Singh",
+      "singers": "Arijit Singh",
+      "music": "Mithoon",
+      "image": "https://c.saavncdn.com/image.jpg?500x500",
+      "media_url": "https://aac.saavncdn.com/song_320.mp4",
+      "320kbps": "true",
+      "has_lyrics": "true",
+      "lyrics": null
+    },
+    {
+      "id": "def456",
+      "song": "Sunn Raha Hai",
+      "album": "Aashiqui 2",
+      "primary_artists": "Ankit Tiwari",
+      "singers": "Ankit Tiwari",
+      "music": "Ankit Tiwari",
+      "image": "https://c.saavncdn.com/image.jpg?500x500",
+      "media_url": "https://aac.saavncdn.com/song_320.mp4",
+      "320kbps": "true",
+      "has_lyrics": "true",
+      "lyrics": null
+    }
+  ]
+}
+```
+
+---
+
+## Get Album by URL
+
+Retrieve album information using a Saavn album URL.
+
+### Endpoint
+
+```
+GET /api/v1/SongsData/GetAlbumByLink
+```
+
+### Authentication
+
+<Warning>
+  This endpoint requires authentication. Include a valid bearer token in the Authorization header.
+</Warning>
+
+### Query Parameters
+
+<ParamField query="inputUrl" type="string" required>
+  The Saavn URL of the album (e.g., https://www.saavn.com/album/...).
+</ParamField>
+
+<ParamField query="lyrics" type="boolean" default="false">
+  Whether to include lyrics for all songs in the album.
+</ParamField>
+
+### Response
+
+The response format is identical to the [Get Album by ID](#get-album-by-id) endpoint.
+
+### Error Responses
+
+<ResponseField name="status" type="integer">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error description
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Success
+- `400` - Bad Request (invalid URL format)
+- `401` - Unauthorized (missing or invalid authentication)
+- `404` - Not Found (album not found at the provided URL)
+
+### Examples
+
+<CodeGroup>
+
+```bash Get Album by URL
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetAlbumByLink?inputUrl=https://www.saavn.com/album/aashiqui-2/example" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```bash With Lyrics
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetAlbumByLink?inputUrl=https://www.saavn.com/album/aashiqui-2/example&lyrics=true" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+</CodeGroup>
+
+### Notes
+
+- The endpoint extracts the album ID from the provided URL automatically
+- All text fields are processed to decode HTML entities (&quot; → ', &amp; → &, &#039; → ')
+- Image URLs are automatically upgraded to 500x500 resolution
+- Each song in the album is fully processed with decrypted media URLs
+- The `year` field is used to validate album existence (year = 0 indicates album not found)

@@ -1,0 +1,122 @@
+---
+title: Introduction to Swar
+description: Welcome to Swar - Your Personal Music Streaming Platform
+---
+
+# Welcome to Swar
+
+Swar is a modern music streaming platform that brings you unlimited access to your favorite songs, personalized playlists, and a seamless listening experience.
+
+## Get Started
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get up and running with Swar in minutes
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api/swar/authentication"
+  >
+    Explore our comprehensive API documentation
+  </Card>
+  <Card
+    title="Features"
+    icon="stars"
+    href="#key-features"
+  >
+    Discover what makes Swar special
+  </Card>
+  <Card
+    title="Authentication"
+    icon="lock"
+    href="#authentication"
+  >
+    Learn about secure JWT-based authentication
+  </Card>
+</CardGroup>
+
+## What is Swar?
+
+Swar is a full-featured music streaming application built with modern technologies. Whether you're discovering new music, creating playlists, or enjoying your favorite tracks, Swar provides an intuitive and powerful platform for all your music needs.
+
+### Key Features
+
+<AccordionGroup>
+  <Accordion title="User Management" icon="user">
+    - **Account Creation**: Register with email and password
+    - **Secure Authentication**: JWT-based authentication with refresh tokens
+    - **Profile Management**: Update your profile and password
+    - **Role-Based Access**: Admin and user roles with different permissions
+  </Accordion>
+
+  <Accordion title="Music Discovery & Playback" icon="music">
+    - **Search Songs**: Find songs by name, artist, or album
+    - **Play Music**: Stream songs with full playback controls (play, pause, next, previous, seek)
+    - **Song Suggestions**: Get personalized song recommendations
+    - **Lyrics**: View lyrics for your favorite songs
+    - **Play History**: Track your recently played songs
+  </Accordion>
+
+  <Accordion title="Playlist Management" icon="list">
+    - **Create Playlists**: Build custom playlists (up to 3 playlists per user)
+    - **Add Songs**: Add your favorite songs to playlists (up to 5 songs per playlist)
+    - **Privacy Controls**: Make playlists public or private
+    - **Edit & Delete**: Manage your playlists with full CRUD operations
+  </Accordion>
+
+  <Accordion title="Library & Collections" icon="heart">
+    - **Like Songs**: Build your personal collection of liked songs
+    - **Recently Played**: Access your listening history
+    - **Organized Library**: Keep all your music organized in one place
+  </Accordion>
+</AccordionGroup>
+
+## Architecture
+
+Swar is built with a modern microservices architecture:
+
+- **Backend**: .NET Web API with RESTful endpoints
+- **Frontend**: React with responsive UI
+- **Database**: SQL Server for data persistence
+- **Authentication**: JWT tokens with secure refresh mechanism
+- **External Integration**: Third-party API for song data and streaming
+
+## Authentication
+
+Swar uses industry-standard JWT (JSON Web Tokens) for authentication. The platform supports:
+
+- **Access Tokens**: Short-lived tokens for API requests
+- **Refresh Tokens**: Long-lived tokens for obtaining new access tokens
+- **Role-Based Authorization**: Separate permissions for users and administrators
+
+<Note>
+All API endpoints require authentication via Bearer tokens in the Authorization header, except for registration and login endpoints.
+</Note>
+
+## API Structure
+
+The Swar API is organized into logical controllers:
+
+- **Users** (`/api/v1/users`): Account management and authentication
+- **Playlist** (`/api/v1/Playlist`): Playlist CRUD operations
+- **PlaylistSongs** (`/api/v1/PlaylistSongs`): Managing songs in playlists
+- **LikedSongs** (`/api/v1/LikedSongs`): User's liked songs collection
+- **PlayHistory** (`/api/v1/PlayHistory`): Tracking and retrieving play history
+- **SongsData** (`/api/v1/SongsData`): Song search and metadata
+
+## Ready to Start?
+
+Jump into our [Quickstart Guide](/quickstart) to create your account and start streaming music in minutes!
+
+<Card
+  title="Quickstart Guide"
+  icon="play"
+  href="/quickstart"
+>
+  Follow our step-by-step guide to get started with Swar
+</Card>

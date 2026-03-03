@@ -1,0 +1,405 @@
+---
+title: 'Azure Deployment'
+description: 'Deploy Swar services to Azure App Service using GitHub Actions'
+icon: 'microsoft'
+---
+
+## Overview
+
+Swar uses GitHub Actions for continuous deployment to Azure App Service. Both the main API and song service have automated CI/CD pipelines that build, test, and deploy on every push to the main branch.
+
+## Prerequisites
+
+- Azure account with an active subscription
+- Two Azure App Service instances:
+  - **SwarAPI**: For the main API service
+  - **SongServiceAPI**: For the song service
+- GitHub repository with appropriate secrets configured
+
+## GitHub Actions Workflows
+
+The deployment process is automated through two separate workflows:
+
+### SwarAPI Workflow
+
+Location: `/workspace/source/.github/workflows/SwarAPI.yml:1-51`
+
+<CodeGroup>
+
+```yaml SwarAPI.yml
+name: Build and deploy .NET Core application to Web App SwarAPI
+on:
+  push:
+    branches:
+    - main
+    paths:
+      - 'Swar.API/**'
+env:
+  AZURE_WEBAPP_NAME: SwarAPI
+  AZURE_WEBAPP_PACKAGE_PATH: Swar.API\publish
+  CONFIGURATION: Release
+  DOTNET_CORE_VERSION: 6.0.x
+  WORKING_DIRECTORY: Swar.API
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+    - name: Restore
+      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
+    - name: Build
+      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+    - name: Test
+      run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
+    - name: Publish
+      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+    - name: Publish Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: webapp
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    steps:
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v4
+      with:
+        name: webapp
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.SwarAPI_6D29 }}
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+```
+
+```yaml SongServiceAPI.yml
+name: Build and deploy .NET Core application to Web App SongServiceAPI
+on:
+  push:
+    branches:
+    - main
+    paths:
+      - 'SongService.API/**'
+env:
+  AZURE_WEBAPP_NAME: SongServiceAPI
+  AZURE_WEBAPP_PACKAGE_PATH: SongService.API\publish
+  CONFIGURATION: Release
+  DOTNET_CORE_VERSION: 6.0.x
+  WORKING_DIRECTORY: SongService.API
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+    - name: Restore
+      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
+    - name: Build
+      run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
+    - name: Test
+      run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
+    - name: Publish
+      run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+    - name: Publish Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: webapp
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    steps:
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v4
+      with:
+        name: webapp
+        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+    - name: Deploy to Azure WebApp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.SongServiceAPI_298C }}
+        package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+```
+
+</CodeGroup>
+
+## Deployment Pipeline
+
+The CI/CD pipeline consists of two jobs: **build** and **deploy**.
+
+<Steps>
+  <Step title="Trigger">
+    Workflows are triggered on push to the `main` branch when files in the respective service directories change:
+    - `Swar.API/**` triggers SwarAPI deployment
+    - `SongService.API/**` triggers SongServiceAPI deployment
+  </Step>
+  
+  <Step title="Build Job">
+    The build job runs on `windows-latest` and performs:
+    
+    1. Checkout code using `actions/checkout@v4`
+    2. Setup .NET SDK 6.0.x
+    3. Restore NuGet packages
+    4. Build the application in Release configuration
+    5. Run tests
+    6. Publish the application
+    7. Upload artifacts for the deploy job
+  </Step>
+  
+  <Step title="Deploy Job">
+    The deploy job:
+    
+    1. Downloads the build artifacts
+    2. Deploys to Azure App Service using the publish profile
+  </Step>
+</Steps>
+
+## Azure App Service Setup
+
+<Steps>
+  <Step title="Create App Services">
+    Create two Azure App Service instances:
+    
+    ```bash
+    # Create resource group (if needed)
+    az group create --name swar-rg --location eastus
+    
+    # Create App Service plan
+    az appservice plan create \
+      --name swar-plan \
+      --resource-group swar-rg \
+      --sku B1 \
+      --is-linux false
+    
+    # Create Swar API App Service
+    az webapp create \
+      --name SwarAPI \
+      --resource-group swar-rg \
+      --plan swar-plan \
+      --runtime "DOTNETCORE:6.0"
+    
+    # Create Song Service API App Service
+    az webapp create \
+      --name SongServiceAPI \
+      --resource-group swar-rg \
+      --plan swar-plan \
+      --runtime "DOTNETCORE:6.0"
+    ```
+  </Step>
+  
+  <Step title="Download Publish Profiles">
+    Download the publish profiles for both App Services:
+    
+    ```bash
+    # Download SwarAPI publish profile
+    az webapp deployment list-publishing-profiles \
+      --name SwarAPI \
+      --resource-group swar-rg \
+      --xml > SwarAPI.PublishSettings
+    
+    # Download SongServiceAPI publish profile
+    az webapp deployment list-publishing-profiles \
+      --name SongServiceAPI \
+      --resource-group swar-rg \
+      --xml > SongServiceAPI.PublishSettings
+    ```
+  </Step>
+  
+  <Step title="Configure GitHub Secrets">
+    Add the publish profiles as GitHub secrets:
+    
+    1. Go to your GitHub repository
+    2. Navigate to Settings > Secrets and variables > Actions
+    3. Add the following secrets:
+       - `SwarAPI_6D29`: Content of SwarAPI.PublishSettings
+       - `SongServiceAPI_298C`: Content of SongServiceAPI.PublishSettings
+    
+    <Warning>
+      Keep your publish profiles secure. Never commit them to your repository.
+    </Warning>
+  </Step>
+  
+  <Step title="Configure App Settings">
+    Set environment variables in Azure App Service:
+    
+    ```bash
+    # Configure SwarAPI settings
+    az webapp config appsettings set \
+      --name SwarAPI \
+      --resource-group swar-rg \
+      --settings \
+        ConnectionStrings__defaultConnection="Your-Database-Connection-String" \
+        TokenKey__Access="Your-Access-Token-Key" \
+        TokenKey__Refresh="Your-Refresh-Token-Key" \
+        ASPNETCORE_ENVIRONMENT="Production"
+    
+    # Configure SongServiceAPI settings
+    az webapp config appsettings set \
+      --name SongServiceAPI \
+      --resource-group swar-rg \
+      --settings \
+        TokenKey__Access="Your-Access-Token-Key" \
+        ASPNETCORE_ENVIRONMENT="Production"
+    ```
+    
+    See the [Configuration](/deployment/configuration) page for all available settings.
+  </Step>
+</Steps>
+
+## Workflow Configuration
+
+Both workflows use the following environment variables:
+
+| Variable | SwarAPI | SongServiceAPI |
+|----------|---------|----------------|
+| `AZURE_WEBAPP_NAME` | SwarAPI | SongServiceAPI |
+| `AZURE_WEBAPP_PACKAGE_PATH` | Swar.API\publish | SongService.API\publish |
+| `CONFIGURATION` | Release | Release |
+| `DOTNET_CORE_VERSION` | 6.0.x | 6.0.x |
+| `WORKING_DIRECTORY` | Swar.API | SongService.API |
+
+## Monitoring Deployments
+
+### GitHub Actions
+
+Monitor deployment status in GitHub:
+
+1. Go to the **Actions** tab in your repository
+2. Select the workflow run
+3. View logs for each step
+
+### Azure Portal
+
+Monitor in Azure Portal:
+
+1. Navigate to your App Service
+2. Go to **Deployment Center** to see deployment history
+3. Check **Log stream** for runtime logs
+4. Use **Application Insights** for detailed monitoring
+
+## Troubleshooting
+
+### Build Failures
+
+<AccordionGroup>
+  <Accordion title="Test failures">
+    Check the test output in GitHub Actions logs. Fix failing tests before merging to main.
+    
+    ```bash
+    # Run tests locally
+    dotnet test Swar.API --verbosity detailed
+    ```
+  </Accordion>
+  
+  <Accordion title="Restore failures">
+    Ensure all NuGet packages are available and package sources are configured.
+    
+    ```bash
+    # Clear NuGet cache
+    dotnet nuget locals all --clear
+    
+    # Restore packages
+    dotnet restore Swar.API
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Deployment Failures
+
+<AccordionGroup>
+  <Accordion title="Invalid publish profile">
+    1. Download a fresh publish profile from Azure
+    2. Update the GitHub secret
+    3. Re-run the workflow
+  </Accordion>
+  
+  <Accordion title="App Service unavailable">
+    Check Azure App Service status:
+    
+    ```bash
+    az webapp show --name SwarAPI --resource-group swar-rg --query state
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Runtime Issues
+
+<Note>
+  Check Application Insights and Log Stream in Azure Portal for runtime errors.
+</Note>
+
+```bash
+# View live logs
+az webapp log tail --name SwarAPI --resource-group swar-rg
+
+# Download logs
+az webapp log download --name SwarAPI --resource-group swar-rg
+```
+
+## Manual Deployment
+
+If you need to deploy manually:
+
+```bash
+# Publish locally
+dotnet publish Swar.API -c Release -o ./publish
+
+# Deploy using Azure CLI
+az webapp deployment source config-zip \
+  --name SwarAPI \
+  --resource-group swar-rg \
+  --src ./publish.zip
+```
+
+## Best Practices
+
+1. **Use staging slots** for zero-downtime deployments
+2. **Enable Application Insights** for monitoring
+3. **Configure auto-scaling** based on load
+4. **Set up alerts** for failures and performance issues
+5. **Use Azure Key Vault** for sensitive configuration
+6. **Enable continuous deployment** only from protected branches
+
+## Scaling
+
+### Vertical Scaling
+
+```bash
+# Scale up to a higher tier
+az appservice plan update \
+  --name swar-plan \
+  --resource-group swar-rg \
+  --sku P1V2
+```
+
+### Horizontal Scaling
+
+```bash
+# Scale out to multiple instances
+az appservice plan update \
+  --name swar-plan \
+  --resource-group swar-rg \
+  --number-of-workers 3
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/deployment/configuration">
+    Learn about all configuration options
+  </Card>
+  <Card title="Docker Setup" icon="docker" href="/deployment/docker-setup">
+    Deploy using Docker containers
+  </Card>
+</CardGroup>

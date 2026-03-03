@@ -1,0 +1,214 @@
+---
+title: 'Playlists'
+description: 'Retrieve playlist details and songs'
+---
+
+## Get Playlist by ID
+
+Retrieve detailed information about a playlist, including all songs in the playlist.
+
+### Endpoint
+
+```
+GET /api/v1/SongsData/GetPlaylistById
+```
+
+### Authentication
+
+<Warning>
+  This endpoint requires authentication. Include a valid bearer token in the Authorization header.
+</Warning>
+
+### Query Parameters
+
+<ParamField query="listId" type="string" required>
+  The unique identifier of the playlist to retrieve.
+</ParamField>
+
+<ParamField query="lyrics" type="boolean" default="false">
+  Whether to include lyrics for all songs in the playlist. When set to `true`, lyrics will be fetched for songs that have them available.
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="object">
+  A playlist object with detailed information and all songs.
+  
+  <Expandable title="Playlist Properties">
+    <ResponseField name="listname" type="string">
+      Playlist name (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="firstname" type="string">
+      Playlist creator's first name (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="list_count" type="integer">
+      Number of songs in the playlist
+    </ResponseField>
+    
+    <ResponseField name="songs" type="array">
+      Array of song objects in the playlist
+      
+      <Expandable title="Song Object">
+        Each song object contains the same fields as documented in the [Get Song by ID](/api/song-service/songs) endpoint, including:
+        - id
+        - song (title)
+        - album
+        - primary_artists
+        - singers
+        - music
+        - starring
+        - image
+        - media_url
+        - media_preview_url
+        - 320kbps
+        - has_lyrics
+        - lyrics (if requested)
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Responses
+
+<ResponseField name="status" type="integer">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error description
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Success
+- `401` - Unauthorized (missing or invalid authentication)
+- `404` - Not Found (playlist with the specified ID does not exist or is empty)
+
+### Examples
+
+<CodeGroup>
+
+```bash Basic Request
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetPlaylistById?listId=12345" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```bash With Lyrics
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetPlaylistById?listId=12345&lyrics=true" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+</CodeGroup>
+
+### Response Example
+
+```json
+{
+  "listname": "Romantic Hits",
+  "firstname": "JioSaavn",
+  "list_count": 50,
+  "songs": [
+    {
+      "id": "abc123",
+      "song": "Tum Hi Ho",
+      "album": "Aashiqui 2",
+      "primary_artists": "Arijit Singh",
+      "singers": "Arijit Singh",
+      "music": "Mithoon",
+      "image": "https://c.saavncdn.com/image.jpg?500x500",
+      "media_url": "https://aac.saavncdn.com/song_320.mp4",
+      "320kbps": "true",
+      "has_lyrics": "true",
+      "lyrics": null
+    },
+    {
+      "id": "def456",
+      "song": "Channa Mereya",
+      "album": "Ae Dil Hai Mushkil",
+      "primary_artists": "Arijit Singh",
+      "singers": "Arijit Singh",
+      "music": "Pritam",
+      "image": "https://c.saavncdn.com/image.jpg?500x500",
+      "media_url": "https://aac.saavncdn.com/song_320.mp4",
+      "320kbps": "true",
+      "has_lyrics": "true",
+      "lyrics": null
+    }
+  ]
+}
+```
+
+---
+
+## Get Playlist by URL
+
+Retrieve playlist information using a Saavn playlist URL.
+
+### Endpoint
+
+```
+GET /api/v1/SongsData/GetPlaylistByLink
+```
+
+### Authentication
+
+<Warning>
+  This endpoint requires authentication. Include a valid bearer token in the Authorization header.
+</Warning>
+
+### Query Parameters
+
+<ParamField query="inputUrl" type="string" required>
+  The Saavn URL of the playlist (e.g., https://www.saavn.com/playlist/...).
+</ParamField>
+
+<ParamField query="lyrics" type="boolean" default="false">
+  Whether to include lyrics for all songs in the playlist.
+</ParamField>
+
+### Response
+
+The response format is identical to the [Get Playlist by ID](#get-playlist-by-id) endpoint.
+
+### Error Responses
+
+<ResponseField name="status" type="integer">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error description
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Success
+- `400` - Bad Request (invalid URL format)
+- `401` - Unauthorized (missing or invalid authentication)
+- `404` - Not Found (playlist not found at the provided URL)
+
+### Examples
+
+<CodeGroup>
+
+```bash Get Playlist by URL
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetPlaylistByLink?inputUrl=https://www.saavn.com/playlist/romantic-hits/example" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```bash With Lyrics
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetPlaylistByLink?inputUrl=https://www.saavn.com/playlist/romantic-hits/example&lyrics=true" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+</CodeGroup>
+
+### Notes
+
+- The endpoint extracts the playlist ID from the provided URL automatically
+- All text fields are processed to decode HTML entities (&quot; → ', &amp; → &, &#039; → ')
+- Each song in the playlist is fully processed with decrypted media URLs and upgraded image resolutions
+- The `list_count` field is used to validate playlist existence (list_count = 0 indicates playlist not found or empty)
+- Playlists can contain songs from different albums and artists

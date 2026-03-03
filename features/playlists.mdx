@@ -1,0 +1,397 @@
+---
+title: "Playlists"
+description: "Create, manage, and organize your music collections with custom playlists"
+---
+
+## Overview
+
+Playlists in Swar allow users to organize their favorite songs into custom collections. Users can create multiple playlists, add or remove songs, and control privacy settings.
+
+## Managing Playlists
+
+### Viewing Your Playlists
+
+The Library page displays all user-created playlists along with the default "Liked Songs" collection.
+
+```jsx Library Component (Library.jsx:73-109)
+const Library = () => {
+  const [data, setData] = useState({
+    playlists: [],
+    loading: true,
+    error: null,
+  });
+
+  const defaultPlaylist = {
+    publicId: "0",
+    playlistName: "Liked Songs",
+  };
+
+  return (
+    <div className="space-y-4">
+      <PlaylistCard
+        playlist={defaultPlaylist}
+        onUpdate={fetchPlaylists}
+      />
+      {playlists.map((playlist) => (
+        <PlaylistCard
+          key={playlist.playlistId}
+          playlist={playlist}
+          onUpdate={fetchPlaylists}
+        />
+      ))}
+    </div>
+  );
+};
+```
+
+**API Endpoint:**
+```http
+GET /api/v1/Playlist/GetAllPlaylistsByUserId
+Authorization: Bearer {accessToken}
+```
+
+### Creating a Playlist
+
+Users can create new playlists with custom names, descriptions, and privacy settings.
+
+<Steps>
+  <Step title="Open Playlist Modal">
+    Click the "+" button in the Library page to open the playlist creation modal.
+  </Step>
+  
+  <Step title="Enter Playlist Details">
+    Provide a playlist name (required) and optional description. Choose whether to make the playlist private.
+  </Step>
+  
+  <Step title="Create Playlist">
+    Click "Add" to create the playlist. The new playlist appears in your library immediately.
+  </Step>
+</Steps>
+
+```jsx Create Playlist Handler (Library.jsx:55-71)
+const handleCreate = async () => {
+  setIsAdding(true);
+  try {
+    await swarApiClient.post("Playlist/CreatePlaylist", {
+      playlistName: newPlaylist.playlistName,
+      description: newPlaylist.description,
+      isPrivate: newPlaylist.isPrivate,
+    });
+    fetchPlaylists();
+    toast.success("Playlist created successfully.");
+  } catch {
+    toast.error("An error occurred while creating the playlist.");
+  } finally {
+    setIsAdding(false);
+    onClose();
+  }
+};
+```
+
+**API Endpoint:**
+```http
+POST /api/v1/Playlist/CreatePlaylist
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Request Body
+{
+  "playlistName": "My Favorite Songs",
+  "description": "A collection of my all-time favorites",
+  "isPrivate": false
+}
+```
+
+```typescript Response
+{
+  "playlistId": 456,
+  "publicId": "abc123def",
+  "playlistName": "My Favorite Songs",
+  "description": "A collection of my all-time favorites",
+  "isPrivate": false,
+  "createdAt": "2026-03-03T16:20:00Z",
+  "songsCount": 0
+}
+```
+</CodeGroup>
+
+<Note>
+Playlist names are required and cannot be empty. The system will show a validation error if you try to create a playlist without a name.
+</Note>
+
+### Viewing Playlist Details
+
+The Playlist page displays detailed information about a specific playlist and its songs.
+
+```jsx Playlist Component (Playlist.jsx:56-119)
+const Playlist = () => {
+  const { id } = useParams();
+  const { playlistInfo, playlistSongs, loading, error } = 
+    useUserplaylistSongs(id);
+
+  return (
+    <div className="flex flex-row items-start">
+      {/* Playlist Cover - Grid of 4 song images or single image */}
+      <div className="flex-shrink-0">
+        {playlistSongs.length >= 4 ? (
+          <div className="grid grid-cols-2 grid-rows-2">
+            {playlistSongs.slice(0, 4).map((song, index) => (
+              <Image src={song?.image} alt={`Song ${index + 1}`} />
+            ))}
+          </div>
+        ) : (
+          <Image src={playlistSongs[0]?.image} alt="playlist" />
+        )}
+      </div>
+      
+      {/* Playlist Information */}
+      <div className="flex-grow">
+        <p className="text-lg font-bold">{playlistInfo?.playlistName}</p>
+        <p className="text-lg">{playlistInfo?.ownerName} • {playlistInfo?.description}</p>
+        <div className="flex items-center">
+          <IoMdGlobe />
+          <p>{playlistInfo?.isPrivate ? "Private" : "Public"}</p>
+        </div>
+        <div className="flex items-center">
+          <IoMdCalendar />
+          <p>{new Date(playlistInfo?.createdAt).toLocaleDateString()}</p>
+        </div>
+        <div className="flex items-center">
+          <IoMdList />
+          <p>Total Tracks: {playlistInfo?.songsCount}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+**API Endpoint:**
+```http
+GET /api/v1/PlaylistSongs/GetAllSongsInUserPlaylist/{publicId}
+Authorization: Bearer {accessToken}
+```
+
+### Updating Playlist Information
+
+Users can edit playlist names, descriptions, and other metadata.
+
+**API Endpoint:**
+```http
+PUT /api/v1/Playlist/UpdatePlaylist/{playlistId}
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Request Body
+{
+  "playlistName": "Updated Playlist Name",
+  "description": "New description"
+}
+```
+</CodeGroup>
+
+### Updating Privacy Settings
+
+Users can toggle playlist privacy between public and private.
+
+**API Endpoint:**
+```http
+PUT /api/v1/Playlist/UpdatePlaylistPrivacy/{playlistId}
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Request Body
+{
+  "isPrivate": true
+}
+```
+</CodeGroup>
+
+<Tip>
+Private playlists are only visible to you, while public playlists can be shared with others.
+</Tip>
+
+### Deleting a Playlist
+
+Users can permanently delete playlists they own.
+
+**API Endpoint:**
+```http
+DELETE /api/v1/Playlist/DeletePlaylist/{playlistId}
+Authorization: Bearer {accessToken}
+```
+
+<Warning>
+Deleting a playlist is permanent and removes all songs from that playlist. This action cannot be undone.
+</Warning>
+
+## Managing Playlist Songs
+
+### Adding Songs to a Playlist
+
+Users can add songs to any of their playlists from the player or search results.
+
+```jsx Add to Playlist Hook (usePlaylistActionsBase.js:22-35)
+const handleAddToPlaylist = useCallback(
+  async (playlistId, songId) => {
+    await handleApiAction(
+      () =>
+        swarApiClient.post("PlaylistSongs/AddSongToPlaylist", {
+          playlistId,
+          songId,
+        }),
+      "Song added to playlist.",
+      "Failed to add song to playlist."
+    );
+  },
+  [handleApiAction, swarApiClient]
+);
+```
+
+**API Endpoint:**
+```http
+POST /api/v1/PlaylistSongs/AddSongToPlaylist
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Request Body
+{
+  "playlistId": 456,
+  "songId": "song123"
+}
+```
+
+```typescript Response
+{
+  "success": true,
+  "message": "Song added to playlist successfully"
+}
+```
+</CodeGroup>
+
+<Note>
+If you try to add a song that already exists in the playlist, you'll receive a 409 Conflict error with the message "Song already exists in the playlist."
+</Note>
+
+### Removing Songs from a Playlist
+
+Users can remove individual songs from playlists using the dropdown menu.
+
+```jsx Remove Song Handler (Playlist.jsx:36-46)
+const handleRemoveSong = async (songId) => {
+  try {
+    await handleRemoveFromPlaylist(playlistInfo.playlistId, songId);
+    const updatedSongs = songs.filter((song) => song.id !== songId);
+    setSongs(updatedSongs);
+    playlistInfo.songsCount -= 1;
+  } catch {
+    setSongs(playlistSongs);
+    playlistInfo.songsCount += 1;
+  }
+};
+```
+
+**API Endpoint:**
+```http
+DELETE /api/v1/PlaylistSongs/RemoveSongFromPlaylist/{playlistId}/{songId}
+Authorization: Bearer {accessToken}
+```
+
+### Song Dropdown Menu
+
+Each song in a playlist has a menu with additional options:
+
+```jsx Song Dropdown (Playlist.jsx:150-178)
+<Dropdown className="text-white bg-gray-800">
+  <DropdownTrigger>
+    <Button isIconOnly className="bg-transparent">
+      <IoMdMore className="text-2xl text-white" />
+    </Button>
+  </DropdownTrigger>
+  <DropdownMenu variant="faded">
+    <DropdownItem
+      key="delete"
+      className="text-danger"
+      color="danger"
+      startContent={<DeleteIcon />}
+      onClick={() => handleRemoveSong(song.id)}
+    >
+      Remove
+    </DropdownItem>
+  </DropdownMenu>
+</Dropdown>
+```
+
+## UI Components
+
+### Playlist Modal
+
+The `PlaylistModal` component is used for both creating and editing playlists:
+
+```jsx Playlist Modal (PlaylistModal.jsx:57-114)
+<Modal isOpen={isOpen} placement="center" onOpenChange={onClose}>
+  <ModalContent>
+    <ModalHeader>{modalTitle}</ModalHeader>
+    <ModalBody>
+      <Input
+        autoFocus
+        isRequired
+        value={playlistName}
+        onChange={handleNameChange}
+        label="Playlist Name"
+        placeholder="Enter playlist name"
+        variant="bordered"
+        isInvalid={isInvalid}
+        errorMessage={"Playlist name is required."}
+      />
+      <Input
+        value={playlistDescription}
+        onChange={(e) => setPlaylistDescription(e.target.value)}
+        label="Description"
+        placeholder="Enter description"
+        variant="bordered"
+      />
+      {!isEditMode && (
+        <Checkbox>
+          <span>Make Private</span>
+        </Checkbox>
+      )}
+    </ModalBody>
+    <ModalFooter>
+      <Button color="danger" variant="flat" onPress={onClose}>
+        Cancel
+      </Button>
+      <Button color="primary" isLoading={isEditing} onPress={handleSubmit}>
+        {buttonTitle}
+      </Button>
+    </ModalFooter>
+  </ModalContent>
+</Modal>
+```
+
+### Playlist Card
+
+The `PlaylistCard` component displays individual playlists in the library with cover art and metadata.
+
+<Tip>
+Playlists with 4 or more songs display a grid of the first 4 song covers. Playlists with fewer songs show a single cover image.
+</Tip>
+
+## Error Handling
+
+The playlist feature includes comprehensive error handling:
+
+- **404 Not Found**: Playlist doesn't exist or has been deleted
+- **403 Forbidden**: User doesn't have permission to access the playlist
+- **409 Conflict**: Song already exists in the playlist
+- **500 Internal Server Error**: Server-side error occurred
+
+```jsx Error Display (Playlist.jsx:51-53)
+if (error) {
+  return <ErrorMessage statusCode={error.status} />;
+}
+```

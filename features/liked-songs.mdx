@@ -1,0 +1,303 @@
+---
+title: "Liked Songs"
+description: "Save and manage your favorite tracks with the Liked Songs feature"
+---
+
+## Overview
+
+Liked Songs is a special default playlist in Swar that allows users to quickly save their favorite tracks. It functions similarly to a regular playlist but with simplified interaction through a heart button.
+
+## Liking Songs
+
+### Like Button Component
+
+The heart-shaped like button appears on song players and allows users to like or unlike songs with a single click.
+
+```jsx LikeButton Component (LikeButton.jsx:46-84)
+const LikeButton = ({ songId }) => {
+  const [isLiked, setIsLiked] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  return (
+    <div className="heart-container" title={isLiked ? "Unlike" : "Like"}>
+      <input
+        type="checkbox"
+        className="checkbox"
+        checked={isLiked}
+        onChange={handleLikeToggle}
+        disabled={loading}
+      />
+      <div className="svg-container">
+        <svg viewBox="0 0 24 24" className="svg-outline">
+          <path d="M17.5,1.917a6.4,6.4,0,0,0-5.5,3.3..." />
+        </svg>
+        <svg viewBox="0 0 24 24" className="svg-filled">
+          <path d="M17.5,1.917a6.4,6.4,0,0,0-5.5,3.3..." />
+        </svg>
+        <svg className="svg-celebrate" width="100" height="100">
+          <polygon points="10,10 20,20" />
+          {/* Celebration animation elements */}
+        </svg>
+      </div>
+    </div>
+  );
+};
+```
+
+### Checking Like Status
+
+When a song loads, the system checks if it's already liked by the user:
+
+```jsx Fetch Like Status (LikeButton.jsx:12-21)
+const fetchLikeStatus = useCallback(async () => {
+  try {
+    const { data } = await swarApiClient.get(
+      `LikedSongs/IsSongLikedByUser/${songId}`
+    );
+    setIsLiked(data);
+  } catch {
+    toast.error("Failed to fetch like status", { icon: "😓" });
+  }
+}, [songId, swarApiClient]);
+
+useEffect(() => {
+  fetchLikeStatus();
+}, [fetchLikeStatus]);
+```
+
+**API Endpoint:**
+```http
+GET /api/v1/LikedSongs/IsSongLikedByUser/{songId}
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Response
+true  // Song is liked
+// or
+false // Song is not liked
+```
+</CodeGroup>
+
+### Toggle Like/Unlike
+
+Clicking the heart button toggles between liking and unliking a song:
+
+```jsx Like Toggle Handler (LikeButton.jsx:27-44)
+const handleLikeToggle = useCallback(async () => {
+  if (loading) return;
+
+  const method = isLiked ? "DELETE" : "POST";
+  const apiUrl = isLiked
+    ? `LikedSongs/UnlikeSong/${songId}`
+    : `LikedSongs/LikeSong`;
+
+  try {
+    setLoading(true);
+    setIsLiked((prevIsLiked) => !prevIsLiked);
+    await swarApiClient({ method, url: apiUrl, data: songId });
+  } catch {
+    toast.error("Failed to update like status", { icon: "😓" });
+  } finally {
+    setLoading(false);
+  }
+}, [isLiked, songId, swarApiClient, loading]);
+```
+
+<Steps>
+  <Step title="Optimistic Update">
+    The UI immediately updates to show the new like state before making the API call.
+  </Step>
+  
+  <Step title="API Request">
+    The system sends either a POST request (to like) or DELETE request (to unlike) to the server.
+  </Step>
+  
+  <Step title="Error Handling">
+    If the request fails, an error toast is displayed to the user.
+  </Step>
+</Steps>
+
+### Liking a Song
+
+**API Endpoint:**
+```http
+POST /api/v1/LikedSongs/LikeSong
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Request Body
+"song123"  // Song ID as a string
+```
+
+```typescript Response
+{
+  "success": true,
+  "message": "Song added to liked songs"
+}
+```
+</CodeGroup>
+
+### Unliking a Song
+
+**API Endpoint:**
+```http
+DELETE /api/v1/LikedSongs/UnlikeSong/{songId}
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Response
+{
+  "success": true,
+  "message": "Song removed from liked songs"
+}
+```
+</CodeGroup>
+
+## Viewing Liked Songs
+
+Liked Songs appears as the first item in the Library page and functions like a regular playlist.
+
+```jsx Default Playlist (Library.jsx:50-53)
+const defaultPlaylist = {
+  publicId: "0",
+  playlistName: "Liked Songs",
+};
+```
+
+### Accessing Liked Songs Collection
+
+Users can view all their liked songs by clicking on the Liked Songs playlist card.
+
+**API Endpoint:**
+```http
+GET /api/v1/LikedSongs/GetLikedSongs
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Response
+{
+  "songs": [
+    "song123",
+    "song456",
+    "song789"
+  ],
+  "songsCount": 3
+}
+```
+</CodeGroup>
+
+## Removing from Liked Songs
+
+Users can remove songs from their Liked Songs collection in two ways:
+
+1. **From the Player**: Click the filled heart button to unlike the song
+2. **From the Playlist**: Use the dropdown menu to remove the song
+
+### Special Handling for Liked Songs
+
+When removing a song from the Liked Songs playlist (publicId: "0"), the system uses the unlike endpoint:
+
+```jsx Remove from Liked Songs (usePlaylistActionsBase.js:38-50)
+const handleRemoveFromPlaylist = useCallback(
+  async (playlistId, songId) => {
+    const url =
+      playlistId === 0
+        ? `LikedSongs/UnlikeSong/${songId}`
+        : `PlaylistSongs/RemoveSongFromPlaylist/${playlistId}/${songId}`;
+
+    await handleApiAction(
+      () => swarApiClient.delete(url),
+      "Song removed from playlist.",
+      "Failed to remove song from playlist."
+    );
+  },
+  [handleApiAction, swarApiClient]
+);
+```
+
+<Note>
+The Liked Songs collection has a special playlist ID of `0` which routes deletion requests to the LikedSongs API instead of the PlaylistSongs API.
+</Note>
+
+## UI/UX Features
+
+### Heart Animation
+
+The like button includes a celebration animation when users like a song:
+
+- **Outline State**: Shows an empty heart when the song is not liked
+- **Filled State**: Shows a filled red heart when the song is liked
+- **Celebration**: Displays confetti-like animation when transitioning to liked state
+
+### Visual Feedback
+
+<Tabs>
+  <Tab title="Not Liked">
+    The heart appears as an outline in white/gray color.
+  </Tab>
+  
+  <Tab title="Liked">
+    The heart fills with red color and plays a brief celebration animation.
+  </Tab>
+  
+  <Tab title="Loading">
+    The button is disabled during API requests to prevent duplicate actions.
+  </Tab>
+</Tabs>
+
+### Toast Notifications
+
+The system provides user feedback through toast messages:
+
+- **Success**: Implicit success (no toast, visual change is sufficient)
+- **Error**: "Failed to update like status" with a disappointed emoji (😓)
+- **Fetch Error**: "Failed to fetch like status" when loading the initial state
+
+## Error Handling
+
+Liked Songs feature includes comprehensive error handling:
+
+### Common Errors
+
+- **400 Bad Request**: Song already exists in liked songs
+- **403 Forbidden**: User account is inactive
+- **404 Not Found**: Song or user not found
+- **500 Internal Server Error**: Server-side error occurred
+
+### Error Recovery
+
+```jsx Error Handling (LikeButton.jsx:39-41)
+catch {
+  toast.error("Failed to update like status", { icon: "😓" });
+}
+```
+
+If a like/unlike action fails:
+1. The user sees an error toast notification
+2. The UI state remains in the optimistic update position
+3. Users can retry the action by clicking the button again
+
+<Tip>
+The system uses optimistic UI updates to provide immediate visual feedback, making the app feel faster and more responsive.
+</Tip>
+
+## Integration with Other Features
+
+### Profile Statistics
+
+The number of liked songs contributes to the user's profile statistics, though the current implementation tracks total songs listened rather than liked songs count.
+
+### Playlist Management
+
+Liked Songs integrates seamlessly with the playlist system:
+- Appears first in the Library
+- Uses the same PlaylistCard component as regular playlists
+- Can be accessed via the special publicId "0"
+
+<Note>
+Unlike regular playlists, Liked Songs cannot be deleted, renamed, or have its privacy settings changed. It's a permanent collection tied to the user's account.
+</Note>

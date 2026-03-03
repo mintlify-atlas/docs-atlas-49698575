@@ -1,0 +1,286 @@
+---
+title: "User Management"
+description: "Learn how users register, authenticate, and manage their profiles in Swar"
+---
+
+## Overview
+
+Swar provides comprehensive user management through Auth0 integration, allowing users to create accounts, authenticate securely, and manage their profile information.
+
+## User Authentication
+
+### Registration
+
+Users can register using email and password or through external OAuth providers.
+
+<Steps>
+  <Step title="Submit Registration Details">
+    Users provide their email, username, and password through the registration form.
+  </Step>
+  
+  <Step title="Account Creation">
+    The system validates credentials and creates a new user account with a unique user ID.
+  </Step>
+  
+  <Step title="Token Generation">
+    Upon successful registration, the system generates access and refresh tokens for session management.
+  </Step>
+</Steps>
+
+**API Endpoint:**
+```http
+POST /api/v1/users/register
+```
+
+<CodeGroup>
+```typescript Request Body
+{
+  "email": "user@example.com",
+  "username": "musiclover",
+  "password": "SecurePassword123!"
+}
+```
+
+```typescript Response
+{
+  "userId": 123,
+  "email": "user@example.com",
+  "username": "musiclover",
+  "accessToken": "eyJhbGc...",
+  "refreshToken": "eyJhbGc..."
+}
+```
+</CodeGroup>
+
+### Login
+
+Users authenticate using their credentials to access the platform.
+
+**API Endpoint:**
+```http
+POST /api/v1/users/login
+```
+
+<CodeGroup>
+```typescript Request Body
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+```typescript Response
+{
+  "accessToken": "eyJhbGc...",
+  "refreshToken": "eyJhbGc...",
+  "user": {
+    "userId": 123,
+    "email": "user@example.com",
+    "username": "musiclover"
+  }
+}
+```
+</CodeGroup>
+
+### Token Refresh
+
+Access tokens expire periodically. Users can refresh them using their refresh token without re-authenticating.
+
+**API Endpoint:**
+```http
+POST /api/v1/users/refresh-token
+Authorization: Bearer {refreshToken}
+```
+
+## User Profile
+
+### Viewing Profile Information
+
+The Profile page displays user information and statistics using Auth0 authentication.
+
+```jsx Profile Component (Profile.jsx:65-120)
+const Profile = () => {
+  const { user, isLoading } = useAuth0();
+  const [data, setData] = useState({
+    playlists: [],
+    loadingPlaylists: true,
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data } = await swarApiClient.get(
+        "Playlist/GetAllPlaylistsByUserId"
+      );
+      setData({
+        playlists: data,
+        loadingPlaylists: false,
+      });
+    };
+    fetchData();
+  }, [swarApiClient]);
+
+  return (
+    <User
+      name={user?.name}
+      description={user?.nickname}
+      avatarProps={{
+        src: user?.picture,
+        size: "lg",
+        radius: "sm",
+      }}
+    />
+  );
+};
+```
+
+### Profile Information Displayed
+
+The profile page shows:
+
+- **User Details**
+  - Profile picture and name
+  - Username/nickname
+  - Email address
+  - Email verification status
+  - Last updated timestamp
+
+- **Statistics**
+  - Total playlists created
+  - Total songs listened to
+
+**API Endpoint:**
+```http
+GET /api/v1/users/me
+Authorization: Bearer {accessToken}
+```
+
+### Updating Profile
+
+Users can update their profile information including username and email.
+
+**API Endpoint:**
+```http
+PATCH /api/v1/users/me
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Request Body
+{
+  "username": "newusername",
+  "email": "newemail@example.com"
+}
+```
+
+```typescript Response
+{
+  "userId": 123,
+  "username": "newusername",
+  "email": "newemail@example.com",
+  "updatedAt": "2026-03-03T16:20:00Z"
+}
+```
+</CodeGroup>
+
+### Changing Password
+
+Users can update their password for enhanced security.
+
+**API Endpoint:**
+```http
+PATCH /api/v1/users/me/password
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Request Body
+{
+  "currentPassword": "OldPassword123!",
+  "newPassword": "NewSecurePassword456!"
+}
+```
+</CodeGroup>
+
+<Note>
+Passwords must meet security requirements: minimum 8 characters, including uppercase, lowercase, numbers, and special characters.
+</Note>
+
+### Deleting Account
+
+Users can permanently delete their account and all associated data.
+
+**API Endpoint:**
+```http
+DELETE /api/v1/users/me
+Authorization: Bearer {accessToken}
+```
+
+<Warning>
+Deleting an account is permanent and cannot be undone. All playlists, liked songs, and play history will be removed.
+</Warning>
+
+## Admin Functions
+
+### User Management
+
+Administrators have additional capabilities to manage users:
+
+#### Get All Users
+```http
+GET /api/v1/users/GetAllUsers
+Authorization: Bearer {adminAccessToken}
+```
+
+#### Deactivate User Account
+```http
+POST /api/v1/users/{id}/deactivate
+Authorization: Bearer {adminAccessToken}
+```
+
+#### Activate User Account
+```http
+POST /api/v1/users/{id}/activate
+Authorization: Bearer {adminAccessToken}
+```
+
+## UI Components
+
+### Auth0 Integration
+
+Swar uses the `@auth0/auth0-react` library for authentication:
+
+```jsx Auth0 Hook Usage (Profile.jsx:28)
+const { user, isLoading } = useAuth0();
+```
+
+The `useAuth0` hook provides:
+- `user`: Current authenticated user object
+- `isLoading`: Authentication state loading indicator
+- `isAuthenticated`: Boolean indicating if user is logged in
+- `loginWithRedirect()`: Function to trigger login flow
+- `logout()`: Function to log out user
+
+### Profile Display
+
+The profile uses the HeroUI `User` component for a consistent user display:
+
+```jsx User Component (Profile.jsx:67-80)
+<User
+  name={user?.name}
+  description={user?.nickname}
+  className="mb-5"
+  avatarProps={{
+    src: user?.picture || neutralAvatar,
+    size: "lg",
+    radius: "sm",
+  }}
+  classNames={{
+    name: "text-xl font-semibold text-white",
+    description: "text-md text-gray-300",
+  }}
+/>
+```
+
+<Tip>
+The profile automatically falls back to a neutral avatar if no profile picture is available.
+</Tip>

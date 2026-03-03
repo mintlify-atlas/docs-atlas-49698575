@@ -1,0 +1,483 @@
+---
+title: 'Playlists'
+description: 'Playlist management and song organization endpoints'
+---
+
+## Create Playlist
+
+<RequestExample>
+```bash POST /api/v1/Playlist/CreatePlaylist
+curl -X POST https://api.swar.com/api/v1/Playlist/CreatePlaylist \
+  -H "Authorization: Bearer {accessToken}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "playlistName": "My Awesome Playlist",
+    "description": "Collection of my favorite tracks",
+    "isPrivate": false
+  }'
+```
+</RequestExample>
+
+Create a new playlist for the authenticated user.
+
+<Note>
+  Requires authentication with Admin or User role.
+</Note>
+
+### Request Body
+
+<ParamField body="playlistName" type="string" required>
+  Name of the playlist. Must be between 1 and 100 characters.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description of the playlist.
+</ParamField>
+
+<ParamField body="isPrivate" type="boolean" required>
+  Whether the playlist is private (true) or public (false).
+</ParamField>
+
+### Response
+
+<ResponseField name="userId" type="integer">
+  ID of the playlist owner
+</ResponseField>
+
+<ResponseField name="publicId" type="string">
+  Unique public identifier for the playlist
+</ResponseField>
+
+<ResponseField name="playlistId" type="integer">
+  Internal playlist ID
+</ResponseField>
+
+<ResponseField name="ownerName" type="string">
+  Name of the playlist owner
+</ResponseField>
+
+<ResponseField name="playlistName" type="string">
+  Name of the playlist
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Playlist description
+</ResponseField>
+
+<ResponseField name="isPrivate" type="boolean">
+  Privacy setting of the playlist
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 formatted creation timestamp
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "userId": 123,
+  "publicId": "a1b2c3d4e5f6g7h8i9j0",
+  "playlistId": 456,
+  "ownerName": "John Doe",
+  "playlistName": "My Awesome Playlist",
+  "description": "Collection of my favorite tracks",
+  "isPrivate": false,
+  "createdAt": "2026-03-03T10:30:00Z"
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+- `400` - Invalid request or validation error
+- `403` - Inactive account
+- `500` - Internal server error
+
+---
+
+## Get All Playlists by User
+
+<RequestExample>
+```bash GET /api/v1/Playlist/GetAllPlaylistsByUserId
+curl -X GET https://api.swar.com/api/v1/Playlist/GetAllPlaylistsByUserId \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve all playlists for the authenticated user.
+
+<Note>
+  Requires authentication with Admin or User role.
+</Note>
+
+### Response
+
+Returns an array of playlist objects with song counts.
+
+<ResponseExample>
+```json Response
+[
+  {
+    "userId": 123,
+    "publicId": "a1b2c3d4e5f6g7h8i9j0",
+    "playlistId": 456,
+    "ownerName": "John Doe",
+    "playlistName": "My Awesome Playlist",
+    "description": "Collection of my favorite tracks",
+    "isPrivate": false,
+    "createdAt": "2026-03-03T10:30:00Z",
+    "songsCount": 15
+  }
+]
+```
+</ResponseExample>
+
+### Error Codes
+
+- `404` - No playlists found
+- `500` - Internal server error
+
+---
+
+## Get Playlist by ID
+
+<RequestExample>
+```bash GET /api/v1/Playlist/GetPlaylistById/{playlistId}
+curl -X GET https://api.swar.com/api/v1/Playlist/GetPlaylistById/456 \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve a specific playlist by its ID.
+
+<Note>
+  Requires authentication with Admin or User role. Users can only access their own playlists or public playlists.
+</Note>
+
+### Path Parameters
+
+<ParamField path="playlistId" type="integer" required>
+  The ID of the playlist to retrieve
+</ParamField>
+
+### Response
+
+Returns a playlist object with song count.
+
+### Error Codes
+
+- `403` - Unauthorized to access this playlist
+- `404` - Playlist not found
+- `500` - Internal server error
+
+---
+
+## Update Playlist
+
+<RequestExample>
+```bash PUT /api/v1/Playlist/UpdatePlaylist/{playlistId}
+curl -X PUT https://api.swar.com/api/v1/Playlist/UpdatePlaylist/456 \
+  -H "Authorization: Bearer {accessToken}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "playlistName": "Updated Playlist Name",
+    "description": "New description"
+  }'
+```
+</RequestExample>
+
+Update a playlist's name and description.
+
+<Note>
+  Requires authentication with Admin or User role. Users can only update their own playlists.
+</Note>
+
+### Path Parameters
+
+<ParamField path="playlistId" type="integer" required>
+  The ID of the playlist to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="playlistName" type="string" required>
+  New name for the playlist. Must be between 1 and 100 characters.
+</ParamField>
+
+<ParamField body="description" type="string">
+  New description for the playlist.
+</ParamField>
+
+### Response
+
+Returns the updated playlist object.
+
+### Error Codes
+
+- `403` - Unauthorized to update this playlist
+- `404` - Playlist not found
+- `500` - Internal server error
+
+---
+
+## Update Playlist Privacy
+
+<RequestExample>
+```bash PUT /api/v1/Playlist/UpdatePlaylistPrivacy/{playlistId}
+curl -X PUT https://api.swar.com/api/v1/Playlist/UpdatePlaylistPrivacy/456 \
+  -H "Authorization: Bearer {accessToken}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "isPrivate": true
+  }'
+```
+</RequestExample>
+
+Update a playlist's privacy setting.
+
+<Note>
+  Requires authentication with Admin or User role. Users can only update their own playlists.
+</Note>
+
+### Path Parameters
+
+<ParamField path="playlistId" type="integer" required>
+  The ID of the playlist to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="isPrivate" type="boolean" required>
+  Whether the playlist should be private (true) or public (false).
+</ParamField>
+
+### Response
+
+Returns the updated playlist object.
+
+### Error Codes
+
+- `403` - Unauthorized to update this playlist
+- `404` - Playlist not found
+- `500` - Internal server error
+
+---
+
+## Delete Playlist
+
+<RequestExample>
+```bash DELETE /api/v1/Playlist/DeletePlaylist/{playlistId}
+curl -X DELETE https://api.swar.com/api/v1/Playlist/DeletePlaylist/456 \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Delete a playlist.
+
+<Warning>
+  This action cannot be undone. All songs in the playlist will be removed.
+</Warning>
+
+<Note>
+  Requires authentication with Admin or User role. Users can only delete their own playlists.
+</Note>
+
+### Path Parameters
+
+<ParamField path="playlistId" type="integer" required>
+  The ID of the playlist to delete
+</ParamField>
+
+### Response
+
+Returns the deleted playlist object.
+
+### Error Codes
+
+- `403` - Unauthorized to delete this playlist
+- `404` - Playlist not found
+- `500` - Internal server error
+
+---
+
+## Get All Playlists
+
+<RequestExample>
+```bash GET /api/v1/Playlist/GetAllPlaylists
+curl -X GET https://api.swar.com/api/v1/Playlist/GetAllPlaylists \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve all playlists in the system.
+
+<Note>
+  Requires Admin role.
+</Note>
+
+### Response
+
+Returns an array of all playlist objects.
+
+### Error Codes
+
+- `200` - Success (even if no playlists found)
+- `500` - Internal server error
+
+---
+
+## Add Song to Playlist
+
+<RequestExample>
+```bash POST /api/v1/PlaylistSongs/AddSongToPlaylist
+curl -X POST https://api.swar.com/api/v1/PlaylistSongs/AddSongToPlaylist \
+  -H "Authorization: Bearer {accessToken}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "playlistId": 456,
+    "songId": "song123"
+  }'
+```
+</RequestExample>
+
+Add a song to a playlist.
+
+<Note>
+  Requires authentication with Admin or User role. Users can only add songs to their own playlists.
+</Note>
+
+### Request Body
+
+<ParamField body="playlistId" type="integer" required>
+  The ID of the playlist
+</ParamField>
+
+<ParamField body="songId" type="string" required>
+  The ID of the song to add. Maximum 50 characters.
+</ParamField>
+
+### Response
+
+Returns success confirmation.
+
+### Error Codes
+
+- `403` - Unauthorized to modify this playlist
+- `404` - Playlist or song not found
+- `409` - Song already exists in playlist
+- `500` - Internal server error
+
+---
+
+## Remove Song from Playlist
+
+<RequestExample>
+```bash DELETE /api/v1/PlaylistSongs/RemoveSongFromPlaylist/{playlistId}/{songId}
+curl -X DELETE https://api.swar.com/api/v1/PlaylistSongs/RemoveSongFromPlaylist/456/song123 \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Remove a song from a playlist.
+
+<Note>
+  Requires authentication with Admin or User role. Users can only remove songs from their own playlists.
+</Note>
+
+### Path Parameters
+
+<ParamField path="playlistId" type="integer" required>
+  The ID of the playlist
+</ParamField>
+
+<ParamField path="songId" type="string" required>
+  The ID of the song to remove
+</ParamField>
+
+### Response
+
+Returns success confirmation.
+
+### Error Codes
+
+- `403` - Unauthorized to modify this playlist
+- `404` - Playlist or song not found
+- `500` - Internal server error
+
+---
+
+## Get Songs in Playlist
+
+<RequestExample>
+```bash GET /api/v1/PlaylistSongs/GetAllSongsInUserPlaylist/{publicId}
+curl -X GET https://api.swar.com/api/v1/PlaylistSongs/GetAllSongsInUserPlaylist/a1b2c3d4e5f6g7h8i9j0
+```
+</RequestExample>
+
+Retrieve all songs in a specific playlist by its public ID.
+
+<Note>
+  Authentication is optional. Private playlists require the owner to be authenticated.
+</Note>
+
+### Path Parameters
+
+<ParamField path="publicId" type="string" required>
+  The public ID of the playlist
+</ParamField>
+
+### Response
+
+<ResponseField name="userId" type="integer">
+  ID of the playlist owner
+</ResponseField>
+
+<ResponseField name="songsCount" type="integer">
+  Number of songs in the playlist
+</ResponseField>
+
+<ResponseField name="songs" type="array">
+  Array of song IDs in the playlist
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "userId": 123,
+  "songsCount": 3,
+  "songs": ["song123", "song456", "song789"]
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+- `403` - Unauthorized to access private playlist
+- `404` - Playlist not found
+- `500` - Internal server error
+
+---
+
+## Get All Songs in All Playlists
+
+<RequestExample>
+```bash GET /api/v1/PlaylistSongs/GetAllSongsInPlaylist
+curl -X GET https://api.swar.com/api/v1/PlaylistSongs/GetAllSongsInPlaylist \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve all songs across all playlists in the system.
+
+<Note>
+  Requires Admin role.
+</Note>
+
+### Response
+
+Returns an array of all playlist songs.
+
+### Error Codes
+
+- `200` - Success (even if no songs found)
+- `500` - Internal server error

@@ -1,0 +1,169 @@
+---
+title: 'Search Songs'
+description: 'Search for songs by query or URL'
+---
+
+## Search for Songs
+
+<Note>
+  This endpoint supports both text-based search queries and direct Saavn URL lookups.
+</Note>
+
+### Endpoint
+
+```
+GET /api/v1/SongsData/GetSongsByQuery
+```
+
+### Authentication
+
+<Warning>
+  This endpoint requires authentication. Include a valid bearer token in the Authorization header.
+</Warning>
+
+### Query Parameters
+
+<ParamField query="query" type="string" required>
+  The search query for songs. Can be:
+  - Song name, artist name, or album name
+  - A Saavn URL (e.g., https://www.saavn.com/song/...)
+  
+  <Warning>
+    Empty strings and "#" are not valid queries and will return a 400 error.
+  </Warning>
+</ParamField>
+
+<ParamField query="lyrics" type="boolean" default="false">
+  Whether to include lyrics in the search results. When set to `true`, lyrics will be fetched for songs that have them available.
+</ParamField>
+
+<ParamField query="songData" type="boolean" default="true">
+  Whether to include detailed song data in the search results. When set to `false`, only basic song information is returned.
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="array">
+  An array of song objects matching the search query.
+  
+  <Expandable title="Song Object">
+    <ResponseField name="id" type="string">
+      Unique identifier for the song
+    </ResponseField>
+    
+    <ResponseField name="song" type="string">
+      Song title (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="album" type="string">
+      Album name (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="primary_artists" type="string">
+      Primary artists (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="singers" type="string">
+      Singer names (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="music" type="string">
+      Music composer (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="starring" type="string">
+      Actors/stars featured (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="image" type="string">
+      Album/song artwork URL (500x500 resolution)
+    </ResponseField>
+    
+    <ResponseField name="media_url" type="string">
+      Direct streaming URL for the song (320kbps or 160kbps based on availability)
+    </ResponseField>
+    
+    <ResponseField name="media_preview_url" type="string">
+      Preview URL for the song (96kbps)
+    </ResponseField>
+    
+    <ResponseField name="320kbps" type="string">
+      Indicates if high quality (320kbps) audio is available ("true" or "false")
+    </ResponseField>
+    
+    <ResponseField name="has_lyrics" type="string">
+      Indicates if lyrics are available for this song
+    </ResponseField>
+    
+    <ResponseField name="lyrics" type="string" optional>
+      Song lyrics (only included when `lyrics=true` and lyrics are available)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Responses
+
+<ResponseField name="status" type="integer">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error description
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Success
+- `400` - Bad Request (invalid query)
+- `401` - Unauthorized (missing or invalid authentication)
+- `404` - Not Found (no songs found matching the query)
+
+### Examples
+
+<CodeGroup>
+
+```bash Text Search
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongsByQuery?query=tum+hi+ho&lyrics=false&songData=true" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```bash Search with Lyrics
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongsByQuery?query=tum+hi+ho&lyrics=true&songData=true" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```bash URL Search
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongsByQuery?query=https://www.saavn.com/song/example/abc123" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+</CodeGroup>
+
+### Response Example
+
+```json
+[
+  {
+    "id": "abc123",
+    "song": "Tum Hi Ho",
+    "album": "Aashiqui 2",
+    "primary_artists": "Arijit Singh",
+    "singers": "Arijit Singh",
+    "music": "Mithoon",
+    "starring": "Aditya Roy Kapur, Shraddha Kapoor",
+    "image": "https://c.saavncdn.com/image.jpg?500x500",
+    "media_url": "https://aac.saavncdn.com/song_320.mp4",
+    "media_preview_url": "https://preview.saavncdn.com/song_96_p.mp4",
+    "320kbps": "true",
+    "has_lyrics": "true",
+    "lyrics": null
+  }
+]
+```
+
+### Notes
+
+- When searching with a Saavn URL, the endpoint extracts the song ID and returns detailed information for that specific song
+- All text fields are processed to decode HTML entities (&quot; → ', &amp; → &, &#039; → ')
+- Image URLs are automatically upgraded to 500x500 resolution
+- Media URLs are decrypted and formatted based on quality availability

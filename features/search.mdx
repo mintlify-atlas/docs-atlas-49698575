@@ -1,0 +1,395 @@
+---
+title: "Search"
+description: "Discover music with Swar's powerful search functionality"
+---
+
+## Overview
+
+The Search feature allows users to find songs, artists, and albums quickly. Search results display relevant tracks along with extracted artist information and trending songs.
+
+## Search Interface
+
+### Search Bar Component
+
+The search bar appears in the navigation on desktop and at the top of the Search page on mobile.
+
+```jsx Search Page (Search.jsx:42-48)
+const Search = () => {
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get("q") || "";
+
+  return (
+    <div className="block mb-6 md:hidden">
+      <SearchBar />
+    </div>
+  );
+};
+```
+
+### Initiating a Search
+
+Users enter a search query in the search bar, which updates the URL with the query parameter:
+
+```
+https://swar.app/search?q=shape%20of%20you
+```
+
+## Search Flow
+
+<Steps>
+  <Step title="Enter Query">
+    User types a search term in the search bar (e.g., "shape of you").
+  </Step>
+  
+  <Step title="Navigate to Search Page">
+    The app navigates to `/search?q=shape%20of%20you` with the query parameter.
+  </Step>
+  
+  <Step title="Fetch Results">
+    The `useSearchData` hook automatically fetches results based on the query.
+  </Step>
+  
+  <Step title="Display Results">
+    Songs, artists, and trending tracks are displayed in separate sections.
+  </Step>
+</Steps>
+
+## Search Implementation
+
+### Search Data Hook
+
+The `useSearchData` hook handles fetching and processing search results:
+
+```jsx useSearchData Hook (useSearchData.js:11-41)
+const useSearchData = (query) => {
+  const [searchResults, setSearchResults] = useState([]);
+  const [artists, setArtists] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchSearchData = useCallback(async () => {
+    if (!query) {
+      setError({ message: "No search query provided.", status: 404 });
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data: searchData } = await songApiClient.get(
+        `SongsData/GetSongsByQuery?query=${query}&lyrics=false&songData=true`
+      );
+
+      const artistSet = new Set(
+        searchData.flatMap((song) => song.primary_artists)
+      );
+      setArtists(Array.from(artistSet));
+      setSearchResults(searchData);
+    } catch (ex) {
+      setError({
+        message:
+          ex.response?.status === 404
+            ? "No results found, try a different search term."
+            : "Oops! Something went wrong.",
+        status: ex.response?.status || 500,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [query, songApiClient]);
+
+  useEffect(() => {
+    fetchSearchData();
+  }, [fetchSearchData]);
+
+  return { searchResults, artists, loading, error };
+};
+```
+
+**API Endpoint:**
+```http
+GET /api/v1/SongsData/GetSongsByQuery?query={query}&lyrics=false&songData=true
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Response
+[
+  {
+    "id": "song123",
+    "song": "Shape of You",
+    "title": "Shape of You",
+    "primary_artists": ["Ed Sheeran"],
+    "image": "https://example.com/album-art.jpg",
+    "album": "÷ (Divide)",
+    "year": "2017",
+    "duration": 233
+  },
+  {
+    "id": "song456",
+    "song": "Shape of My Heart",
+    "title": "Shape of My Heart",
+    "primary_artists": ["Sting"],
+    "image": "https://example.com/album-art2.jpg",
+    "album": "Ten Summoner's Tales",
+    "year": "1993",
+    "duration": 276
+  }
+]
+```
+</CodeGroup>
+
+### Query Parameters
+
+- `query`: The search term (required)
+- `lyrics`: Whether to include lyrics in results (default: `false`)
+- `songData`: Whether to include full song data (default: `true`)
+
+## Search Results Display
+
+The Search page displays results in three distinct sections:
+
+### 1. Search Results Section
+
+Displays songs matching the search query:
+
+```jsx Search Results Section (Search.jsx:54-70)
+renderSection(
+  "🔎 Search Results",
+  `Search results for "${query}"`,
+  searchLoading,
+  <SongSkeleton cards={5} />,
+  searchResults,
+  (song) => (
+    <SongCard
+      key={song.id}
+      id={song.id}
+      title={song.title}
+      image={song.image}
+      song={song.song}
+      primary_artists={song.primary_artists}
+    />
+  )
+)
+```
+
+### 2. Artists Section
+
+Extracts and displays unique artists from search results:
+
+```jsx Artists Extraction (useSearchData.js:25-28)
+const artistSet = new Set(
+  searchData.flatMap((song) => song.primary_artists)
+);
+setArtists(Array.from(artistSet));
+```
+
+```jsx Artists Section (Search.jsx:72-81)
+renderSection(
+  "🎤 Artists",
+  "Artists related to your search",
+  searchLoading,
+  <ArtistSkeleton cards={5} />,
+  artists,
+  (artist) => (
+    <ArtistButton key={artist} artist={artist} />
+  )
+)
+```
+
+### 3. Trending Section
+
+Displays trending songs in India, regardless of search query:
+
+```jsx Trending Section (Search.jsx:83-99)
+renderSection(
+  "🔥 Trending",
+  "Trending songs in India",
+  playlistLoading,
+  <SongSkeleton cards={5} />,
+  playlistSongs.trending,
+  (song) => (
+    <SongCard
+      key={song.id}
+      id={song.id}
+      title={song.title}
+      image={song.image}
+      song={song.song}
+      primary_artists={song.primary_artists}
+    />
+  )
+)
+```
+
+## Reusable Section Renderer
+
+The search page uses a reusable function to render each section consistently:
+
+```jsx Section Renderer (Search.jsx:23-40)
+const renderSection = (
+  title,
+  subtitle,
+  isLoading,
+  loadingComponent,
+  items,
+  renderItem
+) => (
+  <div className="grid gap-5">
+    <div className="-mb-[3px]">
+      <h1 className="text-lg font-bold">{title}</h1>
+      <p className="mb-2 text-xs">{subtitle}</p>
+    </div>
+    <div className="flex items-center gap-6 pb-4 mb-3 overflow-x-auto">
+      {isLoading ? loadingComponent : items.map(renderItem)}
+    </div>
+  </div>
+);
+```
+
+## UI Components
+
+### Song Card
+
+Displays individual songs with album art, title, and artist information:
+
+```jsx Song Card Usage (Search.jsx:60-68)
+<SongCard
+  key={song.id}
+  id={song.id}
+  title={song.title}
+  image={song.image}
+  song={song.song}
+  primary_artists={song.primary_artists}
+/>
+```
+
+Clicking a song card navigates to the player with the selected song.
+
+### Artist Button
+
+Displays artist names as clickable buttons for filtering or navigation:
+
+```jsx Artist Button Usage (Search.jsx:79)
+<ArtistButton key={artist} artist={artist} />
+```
+
+### Loading States
+
+The search page displays skeleton screens while loading:
+
+- **SongSkeleton**: Shows 5 placeholder song cards
+- **ArtistSkeleton**: Shows 5 placeholder artist buttons
+
+<Tabs>
+  <Tab title="Loading">
+    Skeleton screens provide visual feedback during data fetching.
+  </Tab>
+  
+  <Tab title="Results">
+    Real content replaces skeletons once data is loaded.
+  </Tab>
+  
+  <Tab title="Error">
+    Error messages display if the search fails.
+  </Tab>
+</Tabs>
+
+## Error Handling
+
+The search feature includes comprehensive error handling:
+
+### No Query Provided
+
+```jsx No Query Error (useSearchData.js:12-15)
+if (!query) {
+  setError({ message: "No search query provided.", status: 404 });
+  return;
+}
+```
+
+### No Results Found
+
+```jsx 404 Error (useSearchData.js:33-36)
+setError({
+  message:
+    ex.response?.status === 404
+      ? "No results found, try a different search term."
+      : "Oops! Something went wrong.",
+  status: ex.response?.status || 500,
+});
+```
+
+### Error Display
+
+```jsx Error Message Display (Search.jsx:50-52)
+{error ? (
+  <ErrorMessage statusCode={error.status} />
+) : (
+  // ... results display
+)}
+```
+
+<Note>
+When an error occurs, the search page displays an error message instead of the results sections.
+</Note>
+
+## Horizontal Scrolling
+
+All result sections use horizontal scrolling for better mobile experience:
+
+```jsx Horizontal Scroll Container (Search.jsx:36-38)
+<div className="flex items-center gap-6 pb-4 mb-3 overflow-x-auto hide-scrollbar whitespace-nowrap">
+  {isLoading ? loadingComponent : items.map(renderItem)}
+</div>
+```
+
+Features:
+- **Overflow Scroll**: Cards scroll horizontally when they exceed container width
+- **Hidden Scrollbar**: Uses `hide-scrollbar` class for cleaner appearance
+- **Touch-Friendly**: Optimized for mobile swipe gestures
+
+## Performance Considerations
+
+### Automatic Re-fetching
+
+The search automatically re-fetches when the query parameter changes:
+
+```jsx Auto-fetch on Query Change (useSearchData.js:43-45)
+useEffect(() => {
+  fetchSearchData();
+}, [fetchSearchData]);
+```
+
+### Empty State Handling
+
+If search returns no results, appropriate empty states are displayed rather than showing errors.
+
+<Tip>
+The search feature uses the Song Service API which provides fast, accurate results from a comprehensive music database.
+</Tip>
+
+## Integration with Other Features
+
+### Navigation to Player
+
+Clicking any song from search results navigates to the player:
+
+```jsx
+const navigate = useNavigate();
+const handleSongClick = (songId) => {
+  navigate("/player", { state: { songId } });
+};
+```
+
+### Adding to Playlists
+
+From search results, users can add songs to playlists using the playlist actions.
+
+### Liking Songs
+
+Songs in search results can be liked directly, adding them to the Liked Songs collection.
+
+<Tip>
+Search results integrate seamlessly with playlists, liked songs, and the music player for a unified experience.
+</Tip>

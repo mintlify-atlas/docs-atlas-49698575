@@ -1,0 +1,186 @@
+---
+title: 'Liked Songs'
+description: 'Manage user favorite songs'
+---
+
+## Like a Song
+
+<RequestExample>
+```bash POST /api/v1/LikedSongs/LikeSong
+curl -X POST https://api.swar.com/api/v1/LikedSongs/LikeSong \
+  -H "Authorization: Bearer {accessToken}" \
+  -H "Content-Type: application/json" \
+  -d '"song123"'
+```
+</RequestExample>
+
+Add a song to the authenticated user's liked songs collection.
+
+<Note>
+  Requires authentication with Admin or User role.
+</Note>
+
+### Request Body
+
+The request body should be a JSON string containing the song ID.
+
+<ParamField body="songId" type="string" required>
+  The ID of the song to like
+</ParamField>
+
+### Response
+
+Returns success confirmation.
+
+<ResponseExample>
+```json Response
+{
+  "message": "Song added to liked songs successfully"
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+- `400` - Song already liked by user
+- `403` - Inactive account
+- `404` - Song not found
+- `500` - Internal server error
+
+---
+
+## Unlike a Song
+
+<RequestExample>
+```bash DELETE /api/v1/LikedSongs/UnlikeSong/{songId}
+curl -X DELETE https://api.swar.com/api/v1/LikedSongs/UnlikeSong/song123 \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Remove a song from the authenticated user's liked songs collection.
+
+<Note>
+  Requires authentication with Admin or User role.
+</Note>
+
+### Path Parameters
+
+<ParamField path="songId" type="string" required>
+  The ID of the song to unlike
+</ParamField>
+
+### Response
+
+Returns success confirmation.
+
+<ResponseExample>
+```json Response
+{
+  "message": "Song removed from liked songs successfully"
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+- `404` - Song not found in liked songs
+- `500` - Internal server error
+
+---
+
+## Get Liked Songs
+
+<RequestExample>
+```bash GET /api/v1/LikedSongs/GetLikedSongs
+curl -X GET https://api.swar.com/api/v1/LikedSongs/GetLikedSongs \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Retrieve all songs liked by the authenticated user.
+
+<Note>
+  Requires authentication with Admin or User role.
+</Note>
+
+### Response
+
+Returns an array of liked song objects.
+
+<ResponseField name="userId" type="integer">
+  ID of the user who liked the song
+</ResponseField>
+
+<ResponseField name="songId" type="string">
+  ID of the liked song
+</ResponseField>
+
+<ResponseField name="likedDate" type="string">
+  ISO 8601 formatted timestamp when the song was liked
+</ResponseField>
+
+<ResponseExample>
+```json Response
+[
+  {
+    "userId": 123,
+    "songId": "song123",
+    "likedDate": "2026-03-03T10:30:00Z"
+  },
+  {
+    "userId": 123,
+    "songId": "song456",
+    "likedDate": "2026-03-02T14:20:00Z"
+  },
+  {
+    "userId": 123,
+    "songId": "song789",
+    "likedDate": "2026-03-01T09:15:00Z"
+  }
+]
+```
+</ResponseExample>
+
+### Error Codes
+
+- `404` - No liked songs found
+- `500` - Internal server error
+
+---
+
+## Check if Song is Liked
+
+<RequestExample>
+```bash GET /api/v1/LikedSongs/IsSongLikedByUser/{songId}
+curl -X GET https://api.swar.com/api/v1/LikedSongs/IsSongLikedByUser/song123 \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Check if a specific song is in the authenticated user's liked songs collection.
+
+<Note>
+  Requires authentication with Admin or User role.
+</Note>
+
+### Path Parameters
+
+<ParamField path="songId" type="string" required>
+  The ID of the song to check
+</ParamField>
+
+### Response
+
+Returns a boolean indicating whether the song is liked.
+
+<ResponseExample>
+```json Response
+true
+```
+</ResponseExample>
+
+### Error Codes
+
+- `404` - Song not found
+- `500` - Internal server error

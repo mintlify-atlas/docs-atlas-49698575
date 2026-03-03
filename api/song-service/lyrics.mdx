@@ -1,0 +1,121 @@
+---
+title: 'Lyrics'
+description: 'Retrieve song lyrics'
+---
+
+## Get Lyrics by Song ID
+
+Retrieve the lyrics for a specific song using its unique identifier.
+
+### Endpoint
+
+```
+GET /api/v1/SongsData/GetLyricsById
+```
+
+### Authentication
+
+<Warning>
+  This endpoint requires authentication. Include a valid bearer token in the Authorization header.
+</Warning>
+
+### Query Parameters
+
+<ParamField query="id" type="string" required>
+  The unique identifier of the song whose lyrics are to be retrieved.
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="string">
+  The lyrics text for the requested song. Lyrics are returned as plain text with line breaks.
+</ResponseField>
+
+### Error Responses
+
+<ResponseField name="status" type="integer">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error description
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Success
+- `401` - Unauthorized (missing or invalid authentication)
+- `404` - Not Found (lyrics not found for the specified song)
+
+### Examples
+
+<CodeGroup>
+
+```bash Get Lyrics
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetLyricsById?id=abc123" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+</CodeGroup>
+
+### Response Example
+
+```text
+Tum hi ho
+Tum hi ho
+Zindagi ab tum hi ho
+Chain bhi, mera dard bhi
+Meri aashiqui ab tum hi ho
+
+Tera mera rishta hai kaisa
+Ek pal door gawara nahi
+Tere liye har roz hain jeete
+Tujhko diya mera waqt sabhi
+
+Koi lamha mera na ho tere bina
+Har saans pe naam tera
+```
+
+### Error Response Example
+
+```json
+{
+  "status": 404,
+  "message": "Lyrics not found"
+}
+```
+
+### Alternative: Get Lyrics with Song Details
+
+<Note>
+  You can also retrieve lyrics along with song details by using the `lyrics` parameter in other endpoints:
+  
+  - [Get Song by ID](/api/song-service/songs) with `lyrics=true`
+  - [Search for Songs](/api/song-service/search) with `lyrics=true`
+  - [Get Album by ID](/api/song-service/albums) with `lyrics=true`
+  - [Get Playlist by ID](/api/song-service/playlists) with `lyrics=true`
+</Note>
+
+### Usage Examples
+
+<CodeGroup>
+
+```bash Lyrics Only
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetLyricsById?id=abc123" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```bash Song with Lyrics
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongById?id=abc123&lyrics=true" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+</CodeGroup>
+
+### Notes
+
+- Not all songs have lyrics available in the source database
+- If lyrics are not available, a 404 error is returned
+- Lyrics are returned as plain text with preserved line breaks and formatting
+- This endpoint is useful when you only need lyrics without fetching full song metadata
+- To check if a song has lyrics before making this request, use the [Get Song by ID](/api/song-service/songs) endpoint and check the `has_lyrics` field

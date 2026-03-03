@@ -1,0 +1,281 @@
+---
+title: 'Docker Setup'
+description: 'Build and run Swar services using Docker'
+icon: 'docker'
+---
+
+## Overview
+
+Swar consists of two main services that can be containerized using Docker:
+- **Swar.API**: Main API service for user authentication and application logic
+- **SongService.API**: Music service API for song search, lyrics, and streaming
+
+Both services use .NET 6.0 and are built using multi-stage Docker builds for optimized image sizes.
+
+## Prerequisites
+
+- Docker installed (version 20.10 or later)
+- Docker Compose (optional, for running multiple services)
+- .NET 6.0 SDK (for local development)
+
+## Building Docker Images
+
+<Steps>
+  <Step title="Build Swar.API Image">
+    Navigate to the source directory and build the main API image:
+    
+    ```bash
+    docker build -f Swar.API/Dockerfile -t swar-api:latest .
+    ```
+    
+    This creates a Docker image using the multi-stage build process defined in `/workspace/source/Swar.API/Dockerfile:1-23`.
+  </Step>
+  
+  <Step title="Build SongService.API Image">
+    Build the song service image:
+    
+    ```bash
+    docker build -f SongService.API/Dockerfile -t songservice-api:latest .
+    ```
+    
+    This uses the Dockerfile at `/workspace/source/SongService.API/Dockerfile:1-23`.
+  </Step>
+</Steps>
+
+## Dockerfile Architecture
+
+Both services use identical multi-stage build patterns:
+
+<CodeGroup>
+
+```dockerfile Swar.API
+FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
+WORKDIR /app
+EXPOSE 80
+
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["Swar.API/Swar.API.csproj", "Swar.API/"]
+RUN dotnet restore "./Swar.API/Swar.API.csproj"
+COPY . .
+WORKDIR "/src/Swar.API"
+RUN dotnet build "./Swar.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./Swar.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "Swar.API.dll"]
+```
+
+```dockerfile SongService.API
+FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
+WORKDIR /app
+EXPOSE 80
+
+FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["SongService.API/SongService.API.csproj", "SongService.API/"]
+RUN dotnet restore "./SongService.API/SongService.API.csproj"
+COPY . .
+WORKDIR "/src/SongService.API"
+RUN dotnet build "./SongService.API.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./SongService.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "SongService.API.dll"]
+```
+
+</CodeGroup>
+
+### Build Stages
+
+1. **base**: Runtime environment using ASP.NET Core 6.0
+2. **build**: Compilation stage with .NET SDK 6.0
+3. **publish**: Publishing optimized binaries
+4. **final**: Final minimal image with only runtime dependencies
+
+## Running Containers
+
+<Steps>
+  <Step title="Run Swar.API">
+    ```bash
+    docker run -d \
+      --name swar-api \
+      -p 8080:80 \
+      -e ConnectionStrings__defaultConnection="Data Source=/app/data/SwarDB.db" \
+      -e TokenKey__Access="your-access-token-key" \
+      -e TokenKey__Refresh="your-refresh-token-key" \
+      -v swar-data:/app/data \
+      swar-api:latest
+    ```
+    
+    <Note>
+      Replace the token keys with your own secure values. See the [Configuration](/deployment/configuration) page for details.
+    </Note>
+  </Step>
+  
+  <Step title="Run SongService.API">
+    ```bash
+    docker run -d \
+      --name songservice-api \
+      -p 8081:80 \
+      -e TokenKey__Access="your-access-token-key" \
+      songservice-api:latest
+    ```
+  </Step>
+</Steps>
+
+## Docker Compose Setup
+
+For easier management of multiple services, create a `docker-compose.yml` file:
+
+```yaml docker-compose.yml
+version: '3.8'
+
+services:
+  swar-api:
+    build:
+      context: .
+      dockerfile: Swar.API/Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      - ConnectionStrings__defaultConnection=Data Source=/app/data/SwarDB.db
+      - TokenKey__Access=${SWAR_ACCESS_TOKEN}
+      - TokenKey__Refresh=${SWAR_REFRESH_TOKEN}
+      - ASPNETCORE_ENVIRONMENT=Production
+    volumes:
+      - swar-data:/app/data
+    restart: unless-stopped
+
+  songservice-api:
+    build:
+      context: .
+      dockerfile: SongService.API/Dockerfile
+    ports:
+      - "8081:80"
+    environment:
+      - TokenKey__Access=${SWAR_ACCESS_TOKEN}
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: unless-stopped
+
+volumes:
+  swar-data:
+```
+
+### Running with Docker Compose
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+
+# Rebuild and restart
+docker-compose up -d --build
+```
+
+## Build Arguments
+
+Both Dockerfiles support the `BUILD_CONFIGURATION` argument:
+
+```bash
+# Build with Debug configuration
+docker build --build-arg BUILD_CONFIGURATION=Debug -f Swar.API/Dockerfile -t swar-api:debug .
+
+# Build with Release configuration (default)
+docker build --build-arg BUILD_CONFIGURATION=Release -f Swar.API/Dockerfile -t swar-api:latest .
+```
+
+## Exposed Ports
+
+Both services expose port 80 inside the container:
+- **Swar.API**: Map to host port 8080 (or your preferred port)
+- **SongService.API**: Map to host port 8081 (or your preferred port)
+
+<Warning>
+  Ensure the ports you choose don't conflict with other services on your host machine.
+</Warning>
+
+## Volume Mounting
+
+For Swar.API, mount a volume for database persistence:
+
+```bash
+# Create a named volume
+docker volume create swar-data
+
+# Or mount a host directory
+docker run -v /path/on/host:/app/data swar-api:latest
+```
+
+## Health Checks
+
+Add health checks to ensure containers are running properly:
+
+```yaml
+services:
+  swar-api:
+    # ... other configuration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+## Troubleshooting
+
+### Container won't start
+
+```bash
+# Check container logs
+docker logs swar-api
+
+# Inspect container
+docker inspect swar-api
+```
+
+### Permission issues with database
+
+```bash
+# Ensure the volume has correct permissions
+docker exec swar-api ls -la /app/data
+```
+
+### Port already in use
+
+```bash
+# Check what's using the port
+sudo lsof -i :8080
+
+# Use a different port mapping
+docker run -p 8090:80 swar-api:latest
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Azure Deployment" icon="cloud" href="/deployment/azure-deployment">
+    Deploy to Azure using GitHub Actions
+  </Card>
+  <Card title="Configuration" icon="gear" href="/deployment/configuration">
+    Configure environment variables and settings
+  </Card>
+</CardGroup>

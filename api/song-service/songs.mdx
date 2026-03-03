@@ -1,0 +1,187 @@
+---
+title: 'Songs'
+description: 'Retrieve individual song details by ID'
+---
+
+## Get Song by ID
+
+Retrieve detailed information about a specific song using its unique identifier.
+
+### Endpoint
+
+```
+GET /api/v1/SongsData/GetSongById
+```
+
+### Authentication
+
+<Note>
+  This endpoint does not require authentication.
+</Note>
+
+### Query Parameters
+
+<ParamField query="id" type="string" required>
+  The unique identifier of the song to retrieve.
+</ParamField>
+
+<ParamField query="lyrics" type="boolean" default="false">
+  Whether to include lyrics in the response. When set to `true`, lyrics will be included for songs that have them available.
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="object">
+  A song object with detailed information.
+  
+  <Expandable title="Song Properties">
+    <ResponseField name="id" type="string">
+      Unique identifier for the song
+    </ResponseField>
+    
+    <ResponseField name="song" type="string">
+      Song title (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="album" type="string">
+      Album name (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="primary_artists" type="string">
+      Primary artists (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="singers" type="string">
+      Singer names (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="music" type="string">
+      Music composer (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="starring" type="string">
+      Actors/stars featured (HTML entities decoded)
+    </ResponseField>
+    
+    <ResponseField name="image" type="string">
+      Album/song artwork URL (500x500 resolution)
+    </ResponseField>
+    
+    <ResponseField name="media_url" type="string">
+      Direct streaming URL for the song
+      - 320kbps quality if available
+      - Falls back to 160kbps if 320kbps is not available
+    </ResponseField>
+    
+    <ResponseField name="media_preview_url" type="string">
+      Preview URL for the song (96kbps)
+    </ResponseField>
+    
+    <ResponseField name="320kbps" type="string">
+      Indicates if high quality (320kbps) audio is available ("true" or "false")
+    </ResponseField>
+    
+    <ResponseField name="encrypted_media_url" type="string">
+      Original encrypted media URL from the source
+    </ResponseField>
+    
+    <ResponseField name="has_lyrics" type="string">
+      Indicates if lyrics are available for this song
+    </ResponseField>
+    
+    <ResponseField name="lyrics" type="string" optional>
+      Song lyrics (only included when `lyrics=true` parameter is set and lyrics are available)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Error Responses
+
+<ResponseField name="status" type="integer">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error description
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Success
+- `404` - Not Found (song with the specified ID does not exist)
+- `500` - Internal Server Error (unexpected error occurred)
+
+### Examples
+
+<CodeGroup>
+
+```bash Basic Request
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongById?id=abc123" \
+  -H "Content-Type: application/json"
+```
+
+```bash With Lyrics
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongById?id=abc123&lyrics=true" \
+  -H "Content-Type: application/json"
+```
+
+</CodeGroup>
+
+### Response Example
+
+```json
+{
+  "id": "abc123",
+  "song": "Tum Hi Ho",
+  "album": "Aashiqui 2",
+  "primary_artists": "Arijit Singh",
+  "singers": "Arijit Singh",
+  "music": "Mithoon",
+  "starring": "Aditya Roy Kapur, Shraddha Kapoor",
+  "image": "https://c.saavncdn.com/image.jpg?500x500",
+  "media_url": "https://aac.saavncdn.com/song_320.mp4",
+  "media_preview_url": "https://preview.saavncdn.com/song_96_p.mp4",
+  "encrypted_media_url": "base64_encrypted_string",
+  "320kbps": "true",
+  "has_lyrics": "true",
+  "lyrics": null
+}
+```
+
+### Response Example (with lyrics)
+
+```json
+{
+  "id": "abc123",
+  "song": "Tum Hi Ho",
+  "album": "Aashiqui 2",
+  "primary_artists": "Arijit Singh",
+  "singers": "Arijit Singh",
+  "music": "Mithoon",
+  "starring": "Aditya Roy Kapur, Shraddha Kapoor",
+  "image": "https://c.saavncdn.com/image.jpg?500x500",
+  "media_url": "https://aac.saavncdn.com/song_320.mp4",
+  "media_preview_url": "https://preview.saavncdn.com/song_96_p.mp4",
+  "encrypted_media_url": "base64_encrypted_string",
+  "320kbps": "true",
+  "has_lyrics": "true",
+  "lyrics": "Tum hi ho...\nBandhu...\nSakha...\nTumhi ho..."
+}
+```
+
+### Error Response Example
+
+```json
+{
+  "status": 404,
+  "message": "Song not found"
+}
+```
+
+### Notes
+
+- The `media_url` field contains a decrypted, direct streaming URL
+- Quality is automatically selected: 320kbps if available, otherwise 160kbps
+- All text fields are processed to decode HTML entities (&quot; → ', &amp; → &, &#039; → ')
+- Image URLs are automatically upgraded from 150x150 to 500x500 resolution
+- If lyrics are requested but not available for a song, the `lyrics` field will be `null`

@@ -1,0 +1,332 @@
+---
+title: "Play History"
+description: "Track and view your music listening history in Swar"
+---
+
+## Overview
+
+Play History automatically tracks every song users listen to, creating a personalized record of their music journey. This data powers features like "Recently Played" and helps users rediscover songs they've enjoyed.
+
+## Tracking Play History
+
+### Automatic Song Logging
+
+When a user plays a song, the system automatically logs it to their play history.
+
+**API Endpoint:**
+```http
+POST /api/v1/PlayHistory/LogSongHistory
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Request Body
+"song123"  // Song ID as a string
+```
+
+```typescript Response
+{
+  "message": "Song history logged successfully."
+}
+```
+</CodeGroup>
+
+<Note>
+Song history is logged automatically when the player starts playback. Users don't need to manually track their listening activity.
+</Note>
+
+## Viewing Play History
+
+### Recently Played Songs
+
+Users can view their recently played songs on the Profile page, showing their latest listening activity.
+
+```jsx Recently Played Hook (useRecentlyPlayedSongs.js:31-56)
+const useRecentlyPlayedSongs = () => {
+  const [recentlyPlayed, setRecentlyPlayed] = useState({ 
+    songs: [], 
+    count: 0 
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentlyPlayedSongs = async () => {
+      try {
+        const { data } = await swarApiClient.get(
+          "PlayHistory/GetSongHistoryByUser?=true"
+        );
+
+        const songs = data?.songs || [];
+        if (songs.length === 0) return;
+
+        const songsToFetch = songs.slice(0, 10);
+        const fetchPromises = songsToFetch.map((songId) => fetchSong(songId));
+        const result = await Promise.all(fetchPromises);
+        
+        setRecentlyPlayed({
+          songs: result.filter(Boolean),
+          count: data?.songsCount || 0,
+        });
+      } catch {
+        setRecentlyPlayed({ songs: [], count: 0 });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentlyPlayedSongs();
+  }, [swarApiClient, fetchSong]);
+
+  return { recentlyPlayed, loading };
+};
+```
+
+**API Endpoint:**
+```http
+GET /api/v1/PlayHistory/GetSongHistoryByUser?unique=true
+Authorization: Bearer {accessToken}
+```
+
+<CodeGroup>
+```typescript Response
+{
+  "songs": [
+    "song123",
+    "song456",
+    "song789"
+  ],
+  "songsCount": 15
+}
+```
+</CodeGroup>
+
+### Query Parameters
+
+The `unique` parameter controls whether to return only unique songs:
+
+- `unique=true`: Returns each song only once, showing distinct songs listened to
+- `unique=false`: Returns all play events, including repeated plays
+
+<Tip>
+By default, the app requests unique songs (`unique=true`) to avoid showing duplicates in the Recently Played section.
+</Tip>
+
+## Recent Activity Display
+
+The Profile page displays recently played songs with album artwork and artist information.
+
+```jsx Recent Activity Section (Profile.jsx:166-211)
+<div className="w-full p-8 border border-gray-700">
+  {recentlyPlayedLoading ? (
+    <PlaylistsSkeleton />
+  ) : (
+    <>
+      <h2 className="mb-6 text-2xl font-extrabold text-white">
+        Recent Activity
+      </h2>
+      <CustomScroll>
+        <div className="space-y-4 max-h-[calc(4*5rem)]">
+          {recentlyPlayed.count > 0 ? (
+            recentlyPlayed.songs.map((activity) => (
+              <Link
+                key={activity.id}
+                to="/player"
+                state={{ songId: activity.id }}
+                className="flex items-center gap-4"
+              >
+                <Image
+                  isBlurred
+                  radius="sm"
+                  src={activity.image || playlistSvg}
+                  alt="Album Cover"
+                  className="w-12 h-12 min-w-12"
+                />
+                <div className="flex flex-col">
+                  <h3 className="text-base font-semibold text-white">
+                    {activity.song}
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    {activity.primary_artists}
+                  </p>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div>No recent activity available</div>
+          )}
+        </div>
+      </CustomScroll>
+    </>
+  )}
+</div>
+```
+
+### Features of Recent Activity
+
+- **Scrollable List**: Displays up to 10 most recently played songs
+- **Album Artwork**: Shows blurred images for visual appeal
+- **Song Details**: Displays song name and primary artists
+- **Quick Playback**: Click any song to navigate to the player and resume listening
+- **Empty State**: Shows a message when no activity is available
+
+## Song Data Caching
+
+To improve performance, the play history feature implements caching for song data:
+
+```jsx Song Fetch with Caching (useRecentlyPlayedSongs.js:10-29)
+const fetchSong = useCallback(
+  async (songId) => {
+    try {
+      const cache = await caches.open("song-cache");
+      const cachedResponse = await cache.match(songId);
+      if (cachedResponse) {
+        return await cachedResponse.json();
+      }
+
+      const { data: songData } = await songApiClient(
+        `SongsData/GetSongById?id=${songId}&lyrics=false`
+      );
+      await cache.put(songId, new Response(JSON.stringify(songData)));
+      return songData;
+    } catch {
+      return null;
+    }
+  },
+  [songApiClient]
+);
+```
+
+<Steps>
+  <Step title="Check Cache">
+    First, check if the song data is already cached locally.
+  </Step>
+  
+  <Step title="Fetch from API">
+    If not cached, fetch song details from the Song Service API.
+  </Step>
+  
+  <Step title="Store in Cache">
+    Save the fetched data to the browser cache for future use.
+  </Step>
+  
+  <Step title="Return Data">
+    Return the song data to display in the UI.
+  </Step>
+</Steps>
+
+<Tip>
+Caching significantly improves performance by reducing API calls for frequently accessed songs.
+</Tip>
+
+## Profile Statistics
+
+Play history contributes to user statistics displayed on the Profile page:
+
+```jsx Profile Statistics (Profile.jsx:111-116)
+<div className="flex items-center gap-2 mb-2 text-gray-400">
+  <MdMusicNote className="text-xl text-teal-500" />
+  <p className="text-sm">
+    Songs Listened: {recentlyPlayed.count}
+  </p>
+</div>
+```
+
+The `songsCount` field shows the total number of unique songs the user has listened to.
+
+## Admin Features
+
+### View All User History
+
+Administrators can access play history for all users in the system.
+
+**API Endpoint:**
+```http
+GET /api/v1/PlayHistory/GetAllUserHistory
+Authorization: Bearer {adminAccessToken}
+```
+
+<Note>
+This endpoint is restricted to users with Admin role and returns aggregated listening data across all users.
+</Note>
+
+## Error Handling
+
+The play history feature includes error handling for various scenarios:
+
+### Logging Errors
+
+- **404 Not Found**: Song or user not found
+- **401 Unauthorized**: User account is inactive
+- **500 Internal Server Error**: Server-side error occurred
+
+### Fetch Errors
+
+If fetching play history fails:
+```jsx Error Handling (useRecentlyPlayedSongs.js:48-50)
+catch {
+  setRecentlyPlayed({ songs: [], count: 0 });
+}
+```
+
+The system gracefully handles errors by:
+1. Setting an empty state (no songs, count of 0)
+2. Stopping the loading indicator
+3. Displaying the "No recent activity available" message
+
+## Song Service Integration
+
+Play history integrates with the Song Service API to fetch detailed song information:
+
+**API Endpoint:**
+```http
+GET /api/v1/SongsData/GetSongById?id={songId}&lyrics=false
+```
+
+<CodeGroup>
+```typescript Response
+{
+  "id": "song123",
+  "song": "Shape of You",
+  "primary_artists": "Ed Sheeran",
+  "image": "https://example.com/album-art.jpg",
+  "title": "Shape of You",
+  "album": "÷ (Divide)",
+  "year": "2017",
+  "duration": 233
+}
+```
+</CodeGroup>
+
+## Performance Optimizations
+
+### Batch Fetching
+
+The system fetches multiple songs in parallel using `Promise.all`:
+
+```jsx Parallel Fetching (useRecentlyPlayedSongs.js:41-42)
+const songsToFetch = songs.slice(0, 10);
+const fetchPromises = songsToFetch.map((songId) => fetchSong(songId));
+const result = await Promise.all(fetchPromises);
+```
+
+### Limiting Results
+
+Only the 10 most recent songs are fetched and displayed, reducing:
+- API request volume
+- Memory usage
+- Rendering time
+
+### Null Filtering
+
+```jsx Filter Failed Requests (useRecentlyPlayedSongs.js:43-46)
+setRecentlyPlayed({
+  songs: result.filter(Boolean),
+  count: data?.songsCount || 0,
+});
+```
+
+Songs that fail to fetch are filtered out, ensuring the UI only displays successfully loaded content.
+
+<Tip>
+The play history feature uses aggressive caching and batching to ensure fast load times even for users with extensive listening history.
+</Tip>

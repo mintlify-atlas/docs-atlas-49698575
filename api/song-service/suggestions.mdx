@@ -1,0 +1,122 @@
+---
+title: 'Song Suggestions'
+description: 'Get song recommendations based on a song'
+---
+
+## Get Song Suggestions
+
+Retrieve a list of song suggestions (similar songs) based on a given song ID. This endpoint uses a radio station algorithm to find related songs.
+
+### Endpoint
+
+```
+GET /api/v1/SongsData/GetSongSuggestions
+```
+
+### Authentication
+
+<Warning>
+  This endpoint requires authentication. Include a valid bearer token in the Authorization header.
+</Warning>
+
+### Query Parameters
+
+<ParamField query="songId" type="string" required>
+  The unique identifier of the song to get suggestions for.
+</ParamField>
+
+### Response
+
+<ResponseField name="data" type="array">
+  An array of song IDs representing suggested songs.
+  
+  Each element in the array is a string containing a song ID that can be used with the [Get Song by ID](/api/song-service/songs) endpoint to retrieve full song details.
+</ResponseField>
+
+### Error Responses
+
+<ResponseField name="status" type="integer">
+  HTTP status code
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error description
+</ResponseField>
+
+#### Status Codes
+
+- `200` - Success
+- `401` - Unauthorized (missing or invalid authentication)
+- `404` - Not Found (song or station not found)
+
+### Examples
+
+<CodeGroup>
+
+```bash Get Suggestions
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongSuggestions?songId=abc123" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+</CodeGroup>
+
+### Response Example
+
+```json
+[
+  "def456",
+  "ghi789",
+  "jkl012",
+  "mno345",
+  "pqr678"
+]
+```
+
+### Error Response Example
+
+```json
+{
+  "status": 404,
+  "message": "Station not found"
+}
+```
+
+### Usage Flow
+
+<Note>
+  To get full details of suggested songs:
+  
+  1. Call this endpoint to get the list of suggested song IDs
+  2. For each song ID in the response, call the [Get Song by ID](/api/song-service/songs) endpoint
+</Note>
+
+```bash Example Workflow
+# Step 1: Get suggestions
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongSuggestions?songId=abc123" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Response: ["def456", "ghi789", "jkl012"]
+
+# Step 2: Get details for each suggestion
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongById?id=def456"
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongById?id=ghi789"
+curl -X GET "https://api.swar.com/api/v1/SongsData/GetSongById?id=jkl012"
+```
+
+### Implementation Details
+
+<Expandable title="How Suggestions Work">
+  The suggestion algorithm:
+  
+  1. Creates a station ID based on the provided song ID
+  2. Fetches songs from that station
+  3. Extracts and returns the song IDs from the station's playlist
+  
+  This mimics a "radio" or "similar songs" feature commonly found in music streaming platforms.
+</Expandable>
+
+### Notes
+
+- The number of suggestions returned may vary
+- Suggestions are based on the source platform's recommendation algorithm
+- If no station can be created for the song, a 404 error is returned

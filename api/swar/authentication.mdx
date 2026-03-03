@@ -1,0 +1,218 @@
+---
+title: 'Authentication'
+description: 'User authentication and token management endpoints'
+---
+
+## Login
+
+<RequestExample>
+```bash POST /api/v1/users/login
+curl -X POST https://api.swar.com/api/v1/users/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "SecurePass123"
+  }'
+```
+</RequestExample>
+
+Authenticates a user and returns access and refresh tokens.
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  User's email address. Must be a valid email format with maximum 255 characters.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password. Must be between 8 and 100 characters.
+</ParamField>
+
+### Response
+
+<ResponseField name="accessToken" type="string">
+  JWT access token for API authentication
+</ResponseField>
+
+<ResponseField name="refreshToken" type="string">
+  JWT refresh token to obtain new access tokens
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  User's role (e.g., "User", "Admin")
+</ResponseField>
+
+<ResponseField name="tokenType" type="string">
+  Token type (typically "Bearer")
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "role": "User",
+  "tokenType": "Bearer"
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+- `400` - Invalid request or weak password
+- `401` - Invalid credentials or inactive account
+- `404` - User not found
+- `500` - Internal server error
+
+---
+
+## Register
+
+<RequestExample>
+```bash POST /api/v1/users/register
+curl -X POST https://api.swar.com/api/v1/users/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "SecurePass123"
+  }'
+```
+</RequestExample>
+
+Registers a new user account.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  User's full name. Cannot exceed 100 characters.
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  User's email address. Must be a valid email format with maximum 255 characters.
+</ParamField>
+
+<ParamField body="password" type="string">
+  User's password. Required for standard registration.
+</ParamField>
+
+<ParamField body="externalId" type="string">
+  External authentication provider ID (for OAuth/SSO users)
+</ParamField>
+
+### Response
+
+<ResponseField name="userId" type="integer">
+  Unique user identifier
+</ResponseField>
+
+<ResponseField name="externalId" type="string">
+  External provider ID if applicable
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  User's full name
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  User's role
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Account status (e.g., "Active", "Inactive")
+</ResponseField>
+
+<ResponseField name="registrationDate" type="string">
+  ISO 8601 formatted registration timestamp
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "userId": 123,
+  "externalId": null,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "role": "User",
+  "status": "Active",
+  "registrationDate": "2026-03-03T10:30:00Z"
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+- `400` - Invalid request, weak password, or validation error
+- `409` - User already exists with this email
+- `500` - Internal server error
+
+---
+
+## Refresh Token
+
+<RequestExample>
+```bash POST /api/v1/users/refresh-token
+curl -X POST https://api.swar.com/api/v1/users/refresh-token \
+  -H "Authorization: Bearer {refreshToken}"
+```
+</RequestExample>
+
+Obtains a new access token using a valid refresh token.
+
+<Note>
+  This endpoint requires authentication using the refresh token with the `RefreshTokenScheme`.
+</Note>
+
+### Response
+
+<ResponseField name="accessToken" type="string">
+  New JWT access token
+</ResponseField>
+
+<ResponseField name="tokenType" type="string">
+  Token type (typically "Bearer")
+</ResponseField>
+
+<ResponseExample>
+```json Response
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tokenType": "Bearer"
+}
+```
+</ResponseExample>
+
+### Error Codes
+
+- `401` - Invalid or expired refresh token, or inactive account
+- `404` - User not found
+- `500` - Internal server error
+
+---
+
+## Verify Token
+
+<RequestExample>
+```bash GET /api/v1/users/verify-token
+curl -X GET https://api.swar.com/api/v1/users/verify-token \
+  -H "Authorization: Bearer {accessToken}"
+```
+</RequestExample>
+
+Verifies if the current access token is valid.
+
+<Note>
+  Requires a valid access token in the Authorization header.
+</Note>
+
+### Response
+
+Returns `200 OK` if the token is valid, `401 Unauthorized` otherwise.
+
+### Error Codes
+
+- `401` - Invalid or expired access token

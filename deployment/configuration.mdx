@@ -1,0 +1,480 @@
+---
+title: 'Configuration'
+description: 'Environment variables and configuration options for Swar services'
+icon: 'sliders'
+---
+
+## Overview
+
+Swar services use ASP.NET Core's configuration system, which supports multiple configuration sources including `appsettings.json`, environment variables, and Azure App Settings.
+
+## Configuration Files
+
+Both services use layered configuration files:
+
+- `appsettings.json`: Base configuration for all environments
+- `appsettings.Development.json`: Development-specific overrides
+- Environment variables: Runtime configuration (recommended for production)
+
+## Swar.API Configuration
+
+### Connection Strings
+
+Database connection configuration for SQLite.
+
+<ParamField path="ConnectionStrings.defaultConnection" type="string" required>
+  SQLite database connection string. In development, uses a local file.
+  
+  **Development value**: `Data Source=SwarDB.db`
+  
+  **Production example**: `Data Source=/app/data/SwarDB.db`
+  
+  Source: `/workspace/source/Swar.API/appsettings.Development.json:8-10`
+</ParamField>
+
+<CodeGroup>
+
+```json appsettings.Development.json
+{
+  "ConnectionStrings": {
+    "defaultConnection": "Data Source=SwarDB.db"
+  }
+}
+```
+
+```bash Environment Variable
+# Use double underscores for nested configuration
+export ConnectionStrings__defaultConnection="Data Source=/app/data/SwarDB.db"
+```
+
+```bash Docker
+docker run -e ConnectionStrings__defaultConnection="Data Source=/app/data/SwarDB.db" swar-api
+```
+
+</CodeGroup>
+
+### Token Keys
+
+JWT token signing keys for authentication.
+
+<ParamField path="TokenKey.Access" type="string" required>
+  Secret key for signing access tokens. Must be a secure, random string.
+  
+  **Minimum length**: 32 characters (recommended: 64+ characters)
+  
+  Source: `/workspace/source/Swar.API/appsettings.Development.json:11-14`
+</ParamField>
+
+<ParamField path="TokenKey.Refresh" type="string" required>
+  Secret key for signing refresh tokens. Must be different from access token key.
+  
+  **Minimum length**: 32 characters (recommended: 64+ characters)
+  
+  Source: `/workspace/source/Swar.API/appsettings.Development.json:11-14`
+</ParamField>
+
+<Warning>
+  Never use the development token keys in production. Generate secure random keys using a cryptographically secure method.
+</Warning>
+
+<CodeGroup>
+
+```json appsettings.Development.json
+{
+  "TokenKey": {
+    "Access": "4edb794b7b7ddbec1db3b0f298b0af4413530ee351c16c804b081c1be7a8eadd",
+    "Refresh": "d765f1719586352a447417f468a6a6acd3f418b5decc6470e56f7e4b7794db4bs"
+  }
+}
+```
+
+```bash Generate Secure Keys
+# Generate a secure random key (Linux/Mac)
+openssl rand -hex 64
+
+# Or using PowerShell
+[Convert]::ToBase64String((1..64 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+```
+
+```bash Environment Variables
+export TokenKey__Access="your-secure-access-key-here"
+export TokenKey__Refresh="your-secure-refresh-key-here"
+```
+
+</CodeGroup>
+
+### Logging Configuration
+
+<ParamField path="Logging.LogLevel.Default" type="string" default="Information">
+  Default log level for all categories.
+  
+  **Options**: Trace, Debug, Information, Warning, Error, Critical, None
+  
+  Source: `/workspace/source/Swar.API/appsettings.json:2-7`
+</ParamField>
+
+<ParamField path="Logging.LogLevel.Microsoft.AspNetCore" type="string" default="Warning">
+  Log level for ASP.NET Core framework logs.
+  
+  Source: `/workspace/source/Swar.API/appsettings.json:2-7`
+</ParamField>
+
+```json appsettings.json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+```
+
+### Allowed Hosts
+
+<ParamField path="AllowedHosts" type="string" default="*">
+  Semicolon-delimited list of host names without port numbers.
+  
+  **Development**: `*` (allow all)
+  
+  **Production example**: `swar.example.com;www.swar.example.com`
+  
+  Source: `/workspace/source/Swar.API/appsettings.Development.json:15`
+</ParamField>
+
+## SongService.API Configuration
+
+### Token Keys
+
+<ParamField path="TokenKey.Access" type="string" required>
+  Secret key for validating access tokens. Must match the key used in Swar.API.
+  
+  Source: `/workspace/source/SongService.API/appsettings.Development.json:8-10`
+</ParamField>
+
+<Note>
+  The SongService uses only the Access token key for validation. It does not issue tokens, so it doesn't need the Refresh key.
+</Note>
+
+### Music API Endpoints
+
+Configuration for JioSaavn API integration.
+
+<ParamField path="MusicAPIs.SearchBaseUrl" type="string" required>
+  Base URL for song/artist/album search autocomplete.
+  
+  **Default**: `https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=`
+  
+  Source: `/workspace/source/SongService.API/appsettings.json:9-17`
+</ParamField>
+
+<ParamField path="MusicAPIs.StationIdBaseUrl" type="string" required>
+  Base URL for creating radio station from entity queue.
+  
+  **Default**: `https://www.jiosaavn.com/api.php?__call=webradio.createEntityStation&_format=json&_marker=0&api_version=4&ctx=android&entity_type=queue&entity_id=%5B%22`
+  
+  Source: `/workspace/source/SongService.API/appsettings.json:9-17`
+</ParamField>
+
+<ParamField path="MusicAPIs.SongSuggestionsBaseUrl" type="string" required>
+  Base URL for getting song suggestions from a radio station.
+  
+  **Default**: `https://www.jiosaavn.com/api.php?__call=webradio.getSong&_format=json&_marker=0&api_version=4&ctx=android&k=10&stationid=`
+  
+  Source: `/workspace/source/SongService.API/appsettings.json:9-17`
+</ParamField>
+
+<ParamField path="MusicAPIs.SongDetailsBaseUrl" type="string" required>
+  Base URL for fetching detailed song information.
+  
+  **Default**: `https://www.jiosaavn.com/api.php?__call=song.getDetails&cc=in&_marker=0%3F_marker%3D0&_format=json&pids=`
+  
+  Source: `/workspace/source/SongService.API/appsettings.json:9-17`
+</ParamField>
+
+<ParamField path="MusicAPIs.AlbumDetailsBaseUrl" type="string" required>
+  Base URL for fetching album details and track listings.
+  
+  **Default**: `https://www.jiosaavn.com/api.php?__call=content.getAlbumDetails&_format=json&cc=in&_marker=0%3F_marker%3D0&albumid=`
+  
+  Source: `/workspace/source/SongService.API/appsettings.json:9-17`
+</ParamField>
+
+<ParamField path="MusicAPIs.PlaylistDetailsBaseUrl" type="string" required>
+  Base URL for fetching playlist details and songs.
+  
+  **Default**: `https://www.jiosaavn.com/api.php?__call=playlist.getDetails&_format=json&cc=in&_marker=0%3F_marker%3D0&listid=`
+  
+  Source: `/workspace/source/SongService.API/appsettings.json:9-17`
+</ParamField>
+
+<ParamField path="MusicAPIs.LyricsBaseUrl" type="string" required>
+  Base URL for fetching song lyrics.
+  
+  **Default**: `https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&ctx=web6dot0&api_version=4&_format=json&_marker=0%3F_marker%3D0&lyrics_id=`
+  
+  Source: `/workspace/source/SongService.API/appsettings.json:9-17`
+</ParamField>
+
+<CodeGroup>
+
+```json appsettings.json
+{
+  "MusicAPIs": {
+    "SearchBaseUrl": "https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=",
+    "StationIdBaseUrl": "https://www.jiosaavn.com/api.php?__call=webradio.createEntityStation&_format=json&_marker=0&api_version=4&ctx=android&entity_type=queue&entity_id=%5B%22",
+    "SongSuggestionsBaseUrl": "https://www.jiosaavn.com/api.php?__call=webradio.getSong&_format=json&_marker=0&api_version=4&ctx=android&k=10&stationid=",
+    "SongDetailsBaseUrl": "https://www.jiosaavn.com/api.php?__call=song.getDetails&cc=in&_marker=0%3F_marker%3D0&_format=json&pids=",
+    "AlbumDetailsBaseUrl": "https://www.jiosaavn.com/api.php?__call=content.getAlbumDetails&_format=json&cc=in&_marker=0%3F_marker%3D0&albumid=",
+    "PlaylistDetailsBaseUrl": "https://www.jiosaavn.com/api.php?__call=playlist.getDetails&_format=json&cc=in&_marker=0%3F_marker%3D0&listid=",
+    "LyricsBaseUrl": "https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&ctx=web6dot0&api_version=4&_format=json&_marker=0%3F_marker%3D0&lyrics_id="
+  }
+}
+```
+
+```bash Environment Variables
+export MusicAPIs__SearchBaseUrl="https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query="
+export MusicAPIs__SongDetailsBaseUrl="https://www.jiosaavn.com/api.php?__call=song.getDetails&cc=in&_marker=0%3F_marker%3D0&_format=json&pids="
+# ... and so on for other endpoints
+```
+
+</CodeGroup>
+
+<Note>
+  The Music API URLs are pre-configured to work with JioSaavn. Only modify these if you're integrating with a different music service or proxy.
+</Note>
+
+### Logging Configuration
+
+Same as Swar.API:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+```
+
+Source: `/workspace/source/SongService.API/appsettings.json:1-8`
+
+## Environment-Specific Configuration
+
+### Development
+
+Use `appsettings.Development.json` for local development:
+
+```bash
+# Set environment
+export ASPNETCORE_ENVIRONMENT=Development
+
+# Run the application
+dotnet run
+```
+
+### Production
+
+For production deployments:
+
+1. Set `ASPNETCORE_ENVIRONMENT=Production`
+2. Use environment variables or Azure App Settings for sensitive data
+3. Never commit secrets to source control
+
+### Docker
+
+Pass configuration via environment variables:
+
+```bash
+docker run \
+  -e ASPNETCORE_ENVIRONMENT=Production \
+  -e ConnectionStrings__defaultConnection="Data Source=/app/data/SwarDB.db" \
+  -e TokenKey__Access="your-access-key" \
+  -e TokenKey__Refresh="your-refresh-key" \
+  swar-api:latest
+```
+
+### Azure App Service
+
+Configure via Azure CLI:
+
+```bash
+az webapp config appsettings set \
+  --name SwarAPI \
+  --resource-group swar-rg \
+  --settings \
+    ASPNETCORE_ENVIRONMENT=Production \
+    ConnectionStrings__defaultConnection="Your-Connection-String" \
+    TokenKey__Access="Your-Access-Key" \
+    TokenKey__Refresh="Your-Refresh-Key"
+```
+
+Or via Azure Portal:
+1. Navigate to your App Service
+2. Go to Configuration > Application settings
+3. Add new application settings with the keys above
+
+## Configuration Priority
+
+ASP.NET Core loads configuration in this order (later sources override earlier ones):
+
+1. `appsettings.json`
+2. `appsettings.{Environment}.json`
+3. Environment variables
+4. Command-line arguments
+
+## Security Best Practices
+
+<Warning>
+  Follow these security guidelines for production deployments:
+</Warning>
+
+1. **Never commit secrets** to source control
+2. **Use strong token keys** (minimum 64 characters, cryptographically random)
+3. **Rotate keys regularly** (every 90 days recommended)
+4. **Use Azure Key Vault** for production secrets
+5. **Restrict AllowedHosts** to your actual domain names
+6. **Enable HTTPS** in production
+7. **Use managed identities** when deploying to Azure
+
+### Using Azure Key Vault
+
+```csharp Program.cs
+builder.Configuration.AddAzureKeyVault(
+    new Uri($"https://{keyVaultName}.vault.azure.net/"),
+    new DefaultAzureCredential());
+```
+
+Then store secrets in Key Vault:
+
+```bash
+az keyvault secret set \
+  --vault-name swar-keyvault \
+  --name TokenKey--Access \
+  --value "your-secure-key"
+```
+
+## Configuration Validation
+
+Validate your configuration on startup:
+
+```csharp
+// Ensure required configuration is present
+var tokenKey = builder.Configuration["TokenKey:Access"];
+if (string.IsNullOrEmpty(tokenKey))
+{
+    throw new InvalidOperationException("TokenKey:Access is required");
+}
+```
+
+## Complete Configuration Examples
+
+<CodeGroup>
+
+```json Swar.API (Production)
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "Microsoft.AspNetCore": "Error"
+    }
+  },
+  "AllowedHosts": "swar.example.com",
+  "ConnectionStrings": {
+    "defaultConnection": "Data Source=/var/data/SwarDB.db"
+  },
+  "TokenKey": {
+    "Access": "${TOKEN_ACCESS_KEY}",
+    "Refresh": "${TOKEN_REFRESH_KEY}"
+  }
+}
+```
+
+```json SongService.API (Production)
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "Microsoft.AspNetCore": "Error"
+    }
+  },
+  "AllowedHosts": "api.swar.example.com",
+  "TokenKey": {
+    "Access": "${TOKEN_ACCESS_KEY}"
+  },
+  "MusicAPIs": {
+    "SearchBaseUrl": "https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=",
+    "SongDetailsBaseUrl": "https://www.jiosaavn.com/api.php?__call=song.getDetails&cc=in&_marker=0%3F_marker%3D0&_format=json&pids=",
+    "AlbumDetailsBaseUrl": "https://www.jiosaavn.com/api.php?__call=content.getAlbumDetails&_format=json&cc=in&_marker=0%3F_marker%3D0&albumid=",
+    "PlaylistDetailsBaseUrl": "https://www.jiosaavn.com/api.php?__call=playlist.getDetails&_format=json&cc=in&_marker=0%3F_marker%3D0&listid=",
+    "LyricsBaseUrl": "https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&ctx=web6dot0&api_version=4&_format=json&_marker=0%3F_marker%3D0&lyrics_id="
+  }
+}
+```
+
+```bash .env (for Docker Compose)
+# Environment
+ASPNETCORE_ENVIRONMENT=Production
+
+# Swar.API
+SWAR_DB_CONNECTION=Data Source=/app/data/SwarDB.db
+TOKEN_ACCESS_KEY=your-secure-access-key-here
+TOKEN_REFRESH_KEY=your-secure-refresh-key-here
+
+# Hosts
+SWAR_ALLOWED_HOSTS=swar.example.com
+SONGSERVICE_ALLOWED_HOSTS=api.swar.example.com
+```
+
+</CodeGroup>
+
+## Troubleshooting
+
+### Configuration not loading
+
+Check the environment variable format:
+
+```bash
+# Correct (double underscore)
+export ConnectionStrings__defaultConnection="..."
+
+# Incorrect (single underscore or colon)
+export ConnectionStrings_defaultConnection="..."  # Wrong
+export ConnectionStrings:defaultConnection="..."  # Wrong
+```
+
+### Token validation failing
+
+Ensure both services use the same Access token key:
+
+```bash
+# Both should have identical values
+echo $TokenKey__Access  # On Swar.API
+echo $TokenKey__Access  # On SongService.API
+```
+
+### Database connection issues
+
+Check file permissions and path:
+
+```bash
+# Ensure directory exists
+mkdir -p /app/data
+
+# Check permissions
+ls -la /app/data/SwarDB.db
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Docker Setup" icon="docker" href="/deployment/docker-setup">
+    Learn how to deploy using Docker
+  </Card>
+  <Card title="Azure Deployment" icon="cloud" href="/deployment/azure-deployment">
+    Deploy to Azure App Service
+  </Card>
+</CardGroup>
