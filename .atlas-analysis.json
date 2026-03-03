@@ -1,0 +1,92 @@
+{
+  "projectType": "saas",
+  "projectName": "Swar",
+  "projectDescription": "A music streaming platform providing users with playlist management, liked songs, play history, and comprehensive search capabilities.",
+  "theme": "almond",
+  "primaryColor": "#1DB954",
+  "lightColor": "#1ED760",
+  "darkColor": "#169C46",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/user-management",
+              "features/playlists",
+              "features/liked-songs",
+              "features/play-history",
+              "features/search"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/docker-setup",
+              "deployment/azure-deployment",
+              "deployment/configuration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Swar API",
+            "pages": [
+              "api/swar/authentication",
+              "api/swar/users",
+              "api/swar/playlists",
+              "api/swar/liked-songs",
+              "api/swar/play-history"
+            ]
+          },
+          {
+            "group": "Song Service API",
+            "pages": [
+              "api/song-service/search",
+              "api/song-service/songs",
+              "api/song-service/suggestions",
+              "api/song-service/albums",
+              "api/song-service/playlists",
+              "api/song-service/lyrics"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "User authentication and profile management",
+    "Playlist creation, editing, and sharing",
+    "Song search with multiple filters",
+    "Liked songs collection",
+    "Play history tracking",
+    "Docker containerization support",
+    "Azure cloud deployment"
+  ],
+  "publicApiSurface": [
+    "POST /api/v1/users/register",
+    "POST /api/v1/users/login",
+    "GET /api/v1/users/{userId}",
+    "GET /api/v1/playlists",
+    "POST /api/v1/playlists",
+    "GET /api/v1/likedsongs/{userId}",
+    "POST /api/v1/likedsongs",
+    "GET /api/v1/playhistory/{userId}",
+    "POST /api/v1/playhistory",
+    "GET /api/v1/SongsData/GetSongsByQuery",
+    "GET /api/v1/SongsData/GetSongById",
+    "GET /api/v1/SongsData/GetSongSuggestions",
+    "GET /api/v1/SongsData/GetAlbumById",
+    "GET /api/v1/SongsData/GetPlaylistById",
+    "GET /api/v1/SongsData/GetLyrics"
+  ]
+}
